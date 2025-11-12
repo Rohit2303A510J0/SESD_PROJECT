@@ -1,0 +1,10 @@
+fastapi
+uvicorn[standard]
+psycopg2-binary
+pydantic
+bcrypt
+pyjwt
+pytest
+httpx
+requests
+gunicorn==21.2.0
