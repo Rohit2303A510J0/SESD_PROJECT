@@ -142,7 +142,7 @@ html,body{height:100%;margin:0;font-family:Inter,system-ui,-apple-system,"Segoe 
   async function getAttractions(country){ const res = await fetch(`${BASE_URL}/attractions/${encodeURIComponent(country)}`); if(!res.ok) return {attractions:[]}; return await res.json(); }
 
   async function favoriteAttraction(attractionId) {
-    const token = localStorage.getItem("access_token"); // get fresh token each click
+    const token = localStorage.getItem("access_token");
     console.log("🔹 Attraction ID:", attractionId);
     console.log("🔹 Access Token:", token);
 
@@ -152,12 +152,17 @@ html,body{height:100%;margin:0;font-family:Inter,system-ui,-apple-system,"Segoe 
     }
 
     showLoading(true);
+
     try {
-        const res = await fetch(`${BASE_URL}/favorites/${attractionId}`, {
+        const res = await fetch(`${BASE_URL}/favorites/`, {   // <-- POST to /favorites/ (body)
             method: 'POST',
-            headers: { 'Authorization': `Bearer ${token}` },
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ attraction_id: attractionId })
         });
-        console.log("✅ Response status:", res.status);
+
         const data = await res.json().catch(() => ({}));
         console.log("✅ Response data:", data);
 
