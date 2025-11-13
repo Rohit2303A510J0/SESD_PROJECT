@@ -4,10 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Favorites | Travel Explorer</title>
-  <link
-    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
-    rel="stylesheet"
-  />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
   <style>
     body {
       background: #f9fafb;
@@ -15,69 +12,19 @@
       display: flex;
       flex-direction: column;
     }
-
-    nav.navbar {
-      background: #0d6efd;
-    }
-
-    .navbar-brand, .nav-link {
-      color: white !important;
-      font-weight: 500;
-    }
-
-    .favorites-container {
-      flex: 1;
-      padding: 40px 20px;
-      max-width: 1200px;
-      margin: 0 auto;
-    }
-
-    .favorite-card {
-      border-radius: 15px;
-      overflow: hidden;
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-      transition: transform 0.2s;
-    }
-
-    .favorite-card:hover {
-      transform: scale(1.02);
-    }
-
-    .favorite-card img {
-      width: 100%;
-      height: 200px;
-      object-fit: cover;
-    }
-
-    .favorite-card .card-body {
-      background: white;
-      padding: 15px;
-    }
-
-    .loading-spinner {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 60vh;
-    }
-
-    .no-favorites {
-      text-align: center;
-      margin-top: 80px;
-      font-size: 1.3rem;
-      color: #666;
-    }
-
-    footer {
-      text-align: center;
-      padding: 15px 0;
-      background: #0d6efd;
-      color: white;
-    }
+    nav.navbar { background: #0d6efd; }
+    .navbar-brand, .nav-link { color: white !important; font-weight: 500; }
+    .favorites-container { flex: 1; padding: 40px 20px; max-width: 1200px; margin: 0 auto; }
+    .favorite-card { border-radius: 15px; overflow: hidden; box-shadow: 0 4px 8px rgba(0,0,0,0.1); transition: transform 0.2s; }
+    .favorite-card:hover { transform: scale(1.02); }
+    .favorite-card img { width: 100%; height: 200px; object-fit: cover; }
+    .favorite-card .card-body { background: white; padding: 15px; }
+    .loading-spinner { display: flex; justify-content: center; align-items: center; height: 60vh; }
+    .no-favorites { text-align: center; margin-top: 80px; font-size: 1.3rem; color: #666; }
+    footer { text-align: center; padding: 15px 0; background: #0d6efd; color: white; }
   </style>
 </head>
 <body>
-  <!-- Navbar -->
   <nav class="navbar navbar-expand-lg">
     <div class="container-fluid">
       <a class="navbar-brand" href="map.html">🌍 Travel Explorer</a>
@@ -89,7 +36,6 @@
     </div>
   </nav>
 
-  <!-- Content -->
   <div class="favorites-container">
     <div id="loading" class="loading-spinner">
       <div class="spinner-border text-primary" role="status">
@@ -105,13 +51,13 @@
     </div>
   </div>
 
-  <footer>
-    © 2025 Travel Explorer. All rights reserved.
-  </footer>
+  <footer>© 2025 Travel Explorer. All rights reserved.</footer>
 
   <script>
     const BASE_URL = "https://sesd-project-7gqa.onrender.com";
     const token = localStorage.getItem("access_token");
+
+    console.log("✅ Access Token:", token); // 🔍 Log token for debugging
 
     if (!token) {
       alert("Please log in first.");
@@ -124,16 +70,27 @@
       const noFavEl = document.getElementById("noFavorites");
 
       try {
+        console.log("Fetching favorites...");
         const res = await fetch(`${BASE_URL}/favorites/`, {
+          method: "GET",
           headers: {
-            Authorization: `Bearer ${token}`,
+            "Authorization": `Bearer ${token}`,
+            "Content-Type": "application/json",
           },
         });
 
+        console.log("Response status:", res.status);
+
         loadingEl.classList.add("d-none");
 
+        if (res.status === 405) {
+          alert("❌ Backend route /favorites/ (GET) not implemented yet. Please add it in FastAPI.");
+          return;
+        }
+
         if (!res.ok) {
-          throw new Error("Failed to fetch favorites");
+          const errText = await res.text();
+          throw new Error(`Failed to fetch favorites: ${res.status} ${errText}`);
         }
 
         const data = await res.json();
@@ -151,7 +108,7 @@
           const card = document.createElement("div");
           card.className = "col-md-4";
 
-          const imgSrc = fav.image || (fav.images && fav.images[0]) || "https://via.placeholder.com/400x250?text=No+Image";
+          const imgSrc = fav.image || "https://via.placeholder.com/400x250?text=No+Image";
           card.innerHTML = `
             <div class="card favorite-card">
               <img src="${imgSrc}" alt="${fav.name}" />
@@ -164,12 +121,12 @@
               </div>
             </div>
           `;
-
           listEl.appendChild(card);
         });
       } catch (err) {
         loadingEl.classList.add("d-none");
         alert("Error loading favorites: " + err.message);
+        console.error(err);
       }
     }
 
@@ -179,9 +136,7 @@
       try {
         const res = await fetch(`${BASE_URL}/favorites/${id}`, {
           method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { Authorization: `Bearer ${token}` },
         });
 
         if (!res.ok) {

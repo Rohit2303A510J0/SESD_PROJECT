@@ -1,125 +1,88 @@
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
-from typing import List
+from fastapi import APIRouter, Depends, HTTPException, Header
 from app.database import get_db_connection
-from app.auth import get_current_user  # Using /auth/me logic internally
+import jwt, os
 
 router = APIRouter(prefix="/favorites", tags=["Favorites"])
 
-
-# --------- MODELS ----------
-class FavoriteRequest(BaseModel):
-    attraction_id: int
-    access_token: str  # ✅ add this here so you can send token with body
+JWT_SECRET = os.getenv("JWT_SECRET", "secret123")
+ALGORITHM = "HS256"
 
 
-class TokenInput(BaseModel):
-    access_token: str
-
-
-class FavoriteResponse(BaseModel):
-    id: int
-    attraction_id: int
-    attraction_name: str
-    country: str
-    image1: str | None
-    created_at: str
-
-
-# -------- ADD TO FAVORITES --------
-@router.post("/", status_code=201)
-def add_favorite(req: FavoriteRequest):
-    """
-    Add attraction to favorites using access_token in body.
-    """
-    # ✅ Get user info from token
-    user = get_current_user(TokenInput(access_token=req.access_token))
-    user_id = user["user_id"]
-
-    conn = get_db_connection()
-    cur = conn.cursor()
-
+def get_current_user(authorization: str = Header(...)):
+    """Extract user_id from Bearer token"""
     try:
-        # Prevent duplicate favorites
-        cur.execute("SELECT id FROM favorites WHERE user_id = %s AND attraction_id = %s;", (user_id, req.attraction_id))
-        if cur.fetchone():
-            raise HTTPException(status_code=400, detail="Already added to favorites")
-
-        cur.execute("INSERT INTO favorites (user_id, attraction_id) VALUES (%s, %s);", (user_id, req.attraction_id))
-        conn.commit()
-        return {"message": "Attraction added to favorites"}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error adding favorite: {str(e)}")
-    finally:
-        cur.close()
-        conn.close()
+        if not authorization.startswith("Bearer "):
+            raise HTTPException(status_code=401, detail="Invalid authorization header")
+        token = authorization.split(" ")[1]
+        payload = jwt.decode(token, JWT_SECRET, algorithms=[ALGORITHM])
+        return payload.get("user_id")
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token expired")
+    except Exception:
+        raise HTTPException(status_code=401, detail="Invalid token")
 
 
-# -------- GET ALL FAVORITES --------
-@router.post("/list", response_model=List[FavoriteResponse])
-def get_favorites(token_input: TokenInput):
-    """
-    Get all favorite attractions for current user using access_token in body.
-    """
-    user = get_current_user(token_input)
-    user_id = user["user_id"]
-
+# ----------- GET Favorites -----------
+@router.get("/")
+def get_favorites(user_id: int = Depends(get_current_user)):
     conn = get_db_connection()
     cur = conn.cursor()
-
     try:
         cur.execute("""
-            SELECT f.id, f.attraction_id, a.name, a.country, a.image1, f.created_at
+            SELECT f.id, a.name, a.description, a.image1
             FROM favorites f
             JOIN attractions a ON f.attraction_id = a.id
-            WHERE f.user_id = %s
-            ORDER BY f.created_at DESC;
+            WHERE f.user_id = %s;
         """, (user_id,))
         rows = cur.fetchall()
-
-        return [
-            {
-                "id": r[0],
-                "attraction_id": r[1],
-                "attraction_name": r[2],
-                "country": r[3],
-                "image1": r[4],
-                "created_at": r[5].isoformat()
-            }
-            for r in rows
-        ]
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error fetching favorites: {str(e)}")
+        favorites = []
+        for row in rows:
+            favorites.append({
+                "id": row[0],
+                "name": row[1],
+                "description": row[2],
+                "image": row[3],
+            })
+        return {"favorites": favorites}
     finally:
         cur.close()
         conn.close()
 
 
-# -------- DELETE FAVORITE --------
-class DeleteFavoriteRequest(BaseModel):
-    attraction_id: int
-    access_token: str
-
-
-@router.post("/delete")
-def delete_favorite(req: DeleteFavoriteRequest):
-    """
-    Delete a favorite attraction using access_token in body.
-    """
-    user = get_current_user(TokenInput(access_token=req.access_token))
-    user_id = user["user_id"]
-
+# ----------- ADD Favorite -----------
+@router.post("/{attraction_id}")
+def add_favorite(attraction_id: int, user_id: int = Depends(get_current_user)):
     conn = get_db_connection()
     cur = conn.cursor()
-
     try:
-        cur.execute("DELETE FROM favorites WHERE user_id = %s AND attraction_id = %s;", (user_id, req.attraction_id))
-        if cur.rowcount == 0:
+        cur.execute("SELECT id FROM favorites WHERE user_id=%s AND attraction_id=%s;", (user_id, attraction_id))
+        if cur.fetchone():
+            raise HTTPException(status_code=400, detail="Already in favorites")
+
+        cur.execute(
+            "INSERT INTO favorites (user_id, attraction_id) VALUES (%s, %s) RETURNING id;",
+            (user_id, attraction_id),
+        )
+        conn.commit()
+        new_id = cur.fetchone()[0]
+        return {"message": "Added to favorites", "id": new_id}
+    finally:
+        cur.close()
+        conn.close()
+
+
+# ----------- DELETE Favorite -----------
+@router.delete("/{favorite_id}")
+def remove_favorite(favorite_id: int, user_id: int = Depends(get_current_user)):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute("DELETE FROM favorites WHERE id=%s AND user_id=%s RETURNING id;", (favorite_id, user_id))
+        deleted = cur.fetchone()
+        if not deleted:
             raise HTTPException(status_code=404, detail="Favorite not found")
         conn.commit()
-        return {"message": "Favorite removed successfully"}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error deleting favorite: {str(e)}")
+        return {"message": "Removed successfully", "id": deleted[0]}
     finally:
         cur.close()
         conn.close()
