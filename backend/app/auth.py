@@ -65,23 +65,29 @@ def login_user(email: str, password: str):
 
 # -------- GET CURRENT USER --------
 @router.get("/me")
-def get_current_user(authorization: str = Header(default=None, alias="Authorization")):
+def get_current_user(
+    token: str = None, 
+    authorization: str = Header(default=None, alias="Authorization")
+):
     """
     Get current user info from Bearer token.
-    Works with Render / Swagger UI.
-    Header: Authorization: Bearer <access_token>
+
+    Works in Swagger UI:
+    - Query param: /auth/me?token=<access_token>
+    - OR Header: Authorization: Bearer <access_token>
     """
-    if not authorization:
-        raise HTTPException(status_code=400, detail="Authorization header missing")
-
-    # Remove "Bearer " prefix and strip extra spaces
-    if not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=400, detail="Invalid authorization header format")
-
-    token = authorization.replace("Bearer ", "").strip()
+    # Use token from query if provided, else try header
+    if token:
+        jwt_token = token.strip()
+    elif authorization:
+        if not authorization.startswith("Bearer "):
+            raise HTTPException(status_code=400, detail="Invalid authorization header format")
+        jwt_token = authorization.replace("Bearer ", "").strip()
+    else:
+        raise HTTPException(status_code=400, detail="Token missing (provide as query or header)")
 
     try:
-        payload = jwt.decode(token, JWT_SECRET, algorithms=[ALGORITHM])
+        payload = jwt.decode(jwt_token, JWT_SECRET, algorithms=[ALGORITHM])
         user_id = payload.get("user_id")
         if not user_id:
             raise HTTPException(status_code=401, detail="Invalid token payload")
