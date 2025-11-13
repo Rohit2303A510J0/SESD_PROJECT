@@ -1,8 +1,8 @@
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional
 from app.database import get_db_connection
-from app.auth import get_current_user
+from app.auth import get_current_user  # ✅ Uses access_token to get user info
 
 router = APIRouter(prefix="/favorites", tags=["Favorites"])
 
@@ -16,15 +16,19 @@ class FavoriteResponse(BaseModel):
     attraction_id: int
     attraction_name: str
     country: str
-    image1: str
+    image1: Optional[str] = None
     created_at: str
 
 
-# ---------------- Endpoints ----------------
+# ---------------- POST: Add Favorite ----------------
 @router.post("/", response_model=FavoriteResponse)
-def add_favorite(favorite: FavoriteCreate, current_user: dict = Depends(get_current_user)):
+def add_favorite(
+    favorite: FavoriteCreate,
+    current_user: dict = Depends(get_current_user)
+):
     """
     Add a favorite attraction for the current user.
+    Requires Bearer token authentication.
     """
     user_id = current_user["user_id"]
     conn = get_db_connection()
@@ -47,7 +51,7 @@ def add_favorite(favorite: FavoriteCreate, current_user: dict = Depends(get_curr
         row = cur.fetchone()
         conn.commit()
 
-        # Fetch attraction details for response
+        # Fetch attraction details
         cur.execute("""
             SELECT name, country, image1
             FROM attractions
@@ -77,10 +81,12 @@ def add_favorite(favorite: FavoriteCreate, current_user: dict = Depends(get_curr
         conn.close()
 
 
+# ---------------- GET: Get All Favorites ----------------
 @router.get("/", response_model=List[FavoriteResponse])
 def get_favorites(current_user: dict = Depends(get_current_user)):
     """
     Get all favorite attractions for the current user.
+    Requires Bearer token authentication.
     """
     user_id = current_user["user_id"]
     conn = get_db_connection()
@@ -96,7 +102,7 @@ def get_favorites(current_user: dict = Depends(get_current_user)):
         """, (user_id,))
         rows = cur.fetchall()
 
-        favorites = [
+        return [
             {
                 "id": r[0],
                 "attraction_id": r[1],
@@ -107,7 +113,7 @@ def get_favorites(current_user: dict = Depends(get_current_user)):
             }
             for r in rows
         ]
-        return favorites
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching favorites: {str(e)}")
     finally:
@@ -115,10 +121,12 @@ def get_favorites(current_user: dict = Depends(get_current_user)):
         conn.close()
 
 
+# ---------------- DELETE: Remove Favorite ----------------
 @router.delete("/{attraction_id}")
 def delete_favorite(attraction_id: int, current_user: dict = Depends(get_current_user)):
     """
     Delete a favorite attraction for the current user.
+    Requires Bearer token authentication.
     """
     user_id = current_user["user_id"]
     conn = get_db_connection()
@@ -137,6 +145,7 @@ def delete_favorite(attraction_id: int, current_user: dict = Depends(get_current
 
         conn.commit()
         return {"message": f"Favorite attraction {attraction_id} deleted successfully"}
+
     except HTTPException:
         raise
     except Exception as e:
