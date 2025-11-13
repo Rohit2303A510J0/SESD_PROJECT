@@ -75,7 +75,7 @@ def add_favorite(
 
 
 # ---------------- GET: Get All Favorites ----------------
-@router.get("/", response_model=List[FavoriteResponse])
+@router.post("/", response_model=List[FavoriteResponse])
 def get_favorites(current_user: dict = Depends(get_current_user)):
     user_id = current_user["user_id"]
     conn = get_db_connection()
