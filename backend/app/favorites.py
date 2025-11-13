@@ -1,14 +1,13 @@
 from fastapi import APIRouter, HTTPException, Depends
-from pydantic import BaseModel
-from typing import List, Optional
 from app.database import get_db_connection
 from app.auth import get_current_user
+from pydantic import BaseModel
+from typing import List
 
 router = APIRouter(prefix="/favorites", tags=["Favorites"])
 
 
-# ---------------- Pydantic Models ----------------
-class FavoriteCreate(BaseModel):
+class FavoriteRequest(BaseModel):
     attraction_id: int
 
 
@@ -17,65 +16,35 @@ class FavoriteResponse(BaseModel):
     attraction_id: int
     attraction_name: str
     country: str
-    image1: Optional[str] = None
+    image1: str | None
     created_at: str
 
 
-# ---------------- POST: Add Favorite ----------------
-@router.post("/", response_model=FavoriteResponse)
-def add_favorite(
-    favorite: FavoriteCreate,
-    current_user: dict = Depends(get_current_user)
-):
+# -------- ADD TO FAVORITES --------
+@router.post("/", status_code=201)
+def add_favorite(req: FavoriteRequest, current_user: dict = Depends(get_current_user)):
     user_id = current_user["user_id"]
     conn = get_db_connection()
     cur = conn.cursor()
 
     try:
-        # Check for duplicate
-        cur.execute("SELECT id FROM favorites WHERE user_id = %s AND attraction_id = %s;",
-                    (user_id, favorite.attraction_id))
+        # Check if already favorited
+        cur.execute("SELECT id FROM favorites WHERE user_id = %s AND attraction_id = %s;", (user_id, req.attraction_id))
         if cur.fetchone():
-            raise HTTPException(status_code=400, detail="Attraction already in favorites")
+            raise HTTPException(status_code=400, detail="Already added to favorites")
 
-        # Insert into favorites
-        cur.execute("""
-            INSERT INTO favorites (user_id, attraction_id)
-            VALUES (%s, %s)
-            RETURNING id, attraction_id, created_at;
-        """, (user_id, favorite.attraction_id))
-        row = cur.fetchone()
+        cur.execute("INSERT INTO favorites (user_id, attraction_id) VALUES (%s, %s);", (user_id, req.attraction_id))
         conn.commit()
-
-        # Fetch attraction info
-        cur.execute("SELECT name, country, image1 FROM attractions WHERE id = %s;",
-                    (favorite.attraction_id,))
-        attraction = cur.fetchone()
-
-        if not attraction:
-            raise HTTPException(status_code=404, detail="Attraction not found")
-
-        return {
-            "id": row[0],
-            "attraction_id": row[1],
-            "attraction_name": attraction[0],
-            "country": attraction[1],
-            "image1": attraction[2],
-            "created_at": row[2].isoformat()
-        }
-
-    except HTTPException:
-        raise
+        return {"message": "Attraction added to favorites"}
     except Exception as e:
-        conn.rollback()
         raise HTTPException(status_code=500, detail=f"Error adding favorite: {str(e)}")
     finally:
         cur.close()
         conn.close()
 
 
-# ---------------- GET: Get All Favorites ----------------
-@router.post("/", response_model=List[FavoriteResponse])
+# -------- GET ALL FAVORITES --------
+@router.get("/", response_model=List[FavoriteResponse])
 def get_favorites(current_user: dict = Depends(get_current_user)):
     user_id = current_user["user_id"]
     conn = get_db_connection()
@@ -109,7 +78,7 @@ def get_favorites(current_user: dict = Depends(get_current_user)):
         conn.close()
 
 
-# ---------------- DELETE: Remove Favorite ----------------
+# -------- DELETE FAVORITE --------
 @router.delete("/{attraction_id}")
 def delete_favorite(attraction_id: int, current_user: dict = Depends(get_current_user)):
     user_id = current_user["user_id"]
@@ -117,23 +86,12 @@ def delete_favorite(attraction_id: int, current_user: dict = Depends(get_current
     cur = conn.cursor()
 
     try:
-        cur.execute("""
-            DELETE FROM favorites
-            WHERE user_id = %s AND attraction_id = %s
-            RETURNING id;
-        """, (user_id, attraction_id))
-        deleted = cur.fetchone()
-
-        if not deleted:
+        cur.execute("DELETE FROM favorites WHERE user_id = %s AND attraction_id = %s;", (user_id, attraction_id))
+        if cur.rowcount == 0:
             raise HTTPException(status_code=404, detail="Favorite not found")
-
         conn.commit()
-        return {"message": f"Favorite attraction {attraction_id} deleted successfully"}
-
-    except HTTPException:
-        raise
+        return {"message": "Favorite removed successfully"}
     except Exception as e:
-        conn.rollback()
         raise HTTPException(status_code=500, detail=f"Error deleting favorite: {str(e)}")
     finally:
         cur.close()
