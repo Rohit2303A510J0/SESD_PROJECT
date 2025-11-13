@@ -1,4 +1,5 @@
 from fastapi import APIRouter, HTTPException
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from typing import Optional
 from app.database import get_db_connection
@@ -11,7 +12,7 @@ UNSPLASH_ACCESS_KEY = os.getenv("UNSPLASH_ACCESS_KEY")
 UNSPLASH_URL = "https://api.unsplash.com/search/photos"
 
 
-# ---------------- Pydantic models ----------------
+# ---------------- Pydantic model ----------------
 class AttractionCreate(BaseModel):
     country: str
     name: str
@@ -22,10 +23,10 @@ class AttractionCreate(BaseModel):
     image2: Optional[str] = None
     image3: Optional[str] = None
     image4: Optional[str] = None
-    status: Optional[str] = "available"  # default
+    status: Optional[str] = "available"
 
 
-# ---------------- Helper to fetch images ----------------
+# ---------------- Helper: Fetch Unsplash images ----------------
 def fetch_images_from_unsplash(query: str, per_page: int = 4):
     if not UNSPLASH_ACCESS_KEY:
         return []
@@ -35,9 +36,11 @@ def fetch_images_from_unsplash(query: str, per_page: int = 4):
             headers={"Authorization": f"Client-ID {UNSPLASH_ACCESS_KEY}"},
             params={"query": query, "per_page": per_page}
         )
+        if response.status_code != 200:
+            return []
+
         data = response.json()
-        images = [result["urls"]["regular"] for result in data.get("results", [])]
-        return images
+        return [img["urls"]["regular"] for img in data.get("results", [])]
     except Exception:
         return []
 
@@ -47,23 +50,22 @@ def fetch_images_from_unsplash(query: str, per_page: int = 4):
 def add_attraction(attraction: AttractionCreate):
     """
     Add a new attraction to the database.
-    If images are not provided, fetch 4 images from Unsplash using the attraction name.
+    If no images are provided, fetch from Unsplash automatically.
     """
     conn = get_db_connection()
     cur = conn.cursor()
 
     try:
-        # Check if attraction already exists
-        cur.execute("SELECT id, image1 FROM attractions WHERE country=%s AND name=%s;", (attraction.country, attraction.name))
+        cur.execute("SELECT id FROM attractions WHERE country=%s AND name=%s;", (attraction.country, attraction.name))
         existing = cur.fetchone()
         if existing:
-            return {"message": "Attraction already exists", "id": existing[0]}
+            return JSONResponse({"message": "Attraction already exists", "id": existing[0]})
 
-        # Fetch images if not provided
+        # Fetch Unsplash images if not given
         images = [attraction.image1, attraction.image2, attraction.image3, attraction.image4]
         if not any(images):
             fetched_images = fetch_images_from_unsplash(attraction.name)
-            images = fetched_images + [None] * (4 - len(fetched_images))  # pad to 4
+            images = fetched_images + [None] * (4 - len(fetched_images))
 
         cur.execute("""
             INSERT INTO attractions (country, name, lat, lng, description, image1, image2, image3, image4, status)
@@ -76,10 +78,12 @@ def add_attraction(attraction: AttractionCreate):
 
         new_id = cur.fetchone()[0]
         conn.commit()
-        return {"message": "Attraction added successfully", "id": new_id}
+        return JSONResponse({"message": "Attraction added successfully", "id": new_id})
+
     except Exception as e:
         conn.rollback()
         raise HTTPException(status_code=500, detail=f"Error adding attraction: {str(e)}")
+
     finally:
         cur.close()
         conn.close()
@@ -89,8 +93,8 @@ def add_attraction(attraction: AttractionCreate):
 @router.get("/{country_name}")
 def get_attractions(country_name: str):
     """
-    Get all attractions for a given country.
-    If no attractions exist, returns work_in_progress message.
+    Fetch all attractions for a specific country.
+    Returns a clear JSON even if no data exists.
     """
     conn = get_db_connection()
     cur = conn.cursor()
@@ -104,12 +108,16 @@ def get_attractions(country_name: str):
         rows = cur.fetchall()
 
         if not rows:
-            return {"message": "Work in progress for this country"}
+            return JSONResponse({
+                "country": country_name,
+                "attractions": [],
+                "message": "No attractions available yet for this country"
+            })
 
         attractions = []
         for r in rows:
             attractions.append({
-                "id": r[0],  # ✅ attraction_id added here
+                "id": r[0],
                 "name": r[1],
                 "lat": r[2],
                 "lng": r[3],
@@ -118,19 +126,21 @@ def get_attractions(country_name: str):
                 "status": r[9]
             })
 
-        return {"country": country_name, "attractions": attractions}
+        return JSONResponse({"country": country_name, "attractions": attractions})
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching attractions: {str(e)}")
+
     finally:
         cur.close()
         conn.close()
 
 
-# ---------------- DELETE Attraction ----------------
+# ---------------- Delete Attraction ----------------
 @router.delete("/{attraction_id}")
 def delete_attraction(attraction_id: int):
     """
-    Delete an attraction by its ID.
+    Delete an attraction by ID.
     """
     conn = get_db_connection()
     cur = conn.cursor()
@@ -143,10 +153,13 @@ def delete_attraction(attraction_id: int):
         cur.execute("DELETE FROM attractions WHERE id=%s RETURNING id;", (attraction_id,))
         deleted = cur.fetchone()
         conn.commit()
-        return {"message": f"Attraction {deleted[0]} deleted successfully", "id": deleted[0]}
+
+        return JSONResponse({"message": f"Attraction {deleted[0]} deleted successfully", "id": deleted[0]})
+
     except Exception as e:
         conn.rollback()
         raise HTTPException(status_code=500, detail=f"Error deleting attraction: {str(e)}")
+
     finally:
         cur.close()
         conn.close()

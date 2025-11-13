@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Backend API Test</title>
+  <style>
+    body {
+      font-family: "Poppins", sans-serif;
+      background-color: #0f172a;
+      color: #f1f5f9;
+      padding: 2rem;
+    }
+    h1 {
+      color: #38bdf8;
+    }
+    input, button {
+      padding: 0.5rem;
+      border-radius: 5px;
+      border: none;
+    }
+    button {
+      background-color: #38bdf8;
+      color: #0f172a;
+      cursor: pointer;
+    }
+    pre {
+      background: #1e293b;
+      padding: 1rem;
+      border-radius: 8px;
+      white-space: pre-wrap;
+      word-break: break-word;
+      color: #a5f3fc;
+    }
+  </style>
+</head>
+<body>
+  <h1>🌍 Backend Integration Test</h1>
+
+  <div>
+    <h3>1️⃣ Country Info</h3>
+    <input type="text" id="country" placeholder="Enter country (e.g. India)" />
+    <button onclick="testLocation()">Get Country Info</button>
+  </div>
+
+  <div>
+    <h3>2️⃣ Weather</h3>
+    <input type="text" id="lat" placeholder="Latitude (e.g. 20)" />
+    <input type="text" id="lng" placeholder="Longitude (e.g. 77)" />
+    <button onclick="testWeather()">Get Weather</button>
+  </div>
+
+  <div>
+    <h3>3️⃣ Attractions</h3>
+    <input type="text" id="countryAttract" placeholder="Country name" />
+    <button onclick="testAttractions()">Get Attractions</button>
+  </div>
+
+  <div>
+    <h3>4️⃣ Favorites (requires login token)</h3>
+    <input type="text" id="token" placeholder="Access token" />
+    <button onclick="testFavorites()">Get Favorites</button>
+  </div>
+
+  <hr />
+  <pre id="output">Output will appear here...</pre>
+
+  <script>
+    const BASE_URL = "https://sesd-project-7gqa.onrender.com";
+
+    const show = (data) => {
+      document.getElementById("output").textContent = JSON.stringify(data, null, 2);
+    };
+
+    async function testLocation() {
+      const country = document.getElementById("country").value.trim();
+      const res = await fetch(`${BASE_URL}/location/${encodeURIComponent(country)}`);
+      show(await res.json());
+    }
+
+    async function testWeather() {
+      const lat = document.getElementById("lat").value.trim();
+      const lng = document.getElementById("lng").value.trim();
+      const res = await fetch(`${BASE_URL}/weather?lat=${lat}&lng=${lng}`);
+      show(await res.json());
+    }
+
+    async function testAttractions() {
+      const country = document.getElementById("countryAttract").value.trim();
+      const res = await fetch(`${BASE_URL}/attractions/${encodeURIComponent(country)}`);
+      show(await res.json());
+    }
+
+    async function testFavorites() {
+      const token = document.getElementById("token").value.trim();
+      const res = await fetch(`${BASE_URL}/favorites/`, {
+        headers: { "Authorization": `Bearer ${token}` },
+      });
+      show(await res.json());
+    }
+  </script>
+</body>
+</html>
