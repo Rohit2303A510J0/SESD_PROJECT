@@ -1,5 +1,4 @@
 from fastapi import APIRouter, Depends, HTTPException, Header
-from pydantic import BaseModel
 from app.database import get_db_connection
 import jwt, os
 
@@ -8,6 +7,7 @@ router = APIRouter(prefix="/favorites", tags=["Favorites"])
 JWT_SECRET = os.getenv("JWT_SECRET", "secret123")
 ALGORITHM = "HS256"
 
+# ---------------- Auth helper ----------------
 def get_current_user(authorization: str = Header(...)):
     """Extract user_id from Bearer token"""
     try:
@@ -20,7 +20,6 @@ def get_current_user(authorization: str = Header(...)):
         raise HTTPException(status_code=401, detail="Token expired")
     except Exception:
         raise HTTPException(status_code=401, detail="Invalid token")
-
 
 # ---------------- GET Favorites ----------------
 @router.get("/")
@@ -48,15 +47,12 @@ def get_favorites(user_id: int = Depends(get_current_user)):
         cur.close()
         conn.close()
 
-
-# ---------------- POST /favorites/ (add) ----------------
-class FavoriteIn(BaseModel):
-    attraction_id: int
-
+# ---------------- ADD Favorite ----------------
 @router.post("/")
-def add_favorite(fav: FavoriteIn, user_id: int = Depends(get_current_user)):
-    """Add an attraction to favorites using JSON body"""
-    attraction_id = fav.attraction_id
+def add_favorite(payload: dict, user_id: int = Depends(get_current_user)):
+    attraction_id = payload.get("attraction_id")
+    if not attraction_id:
+        raise HTTPException(status_code=400, detail="Missing attraction_id")
     conn = get_db_connection()
     cur = conn.cursor()
     try:
@@ -68,13 +64,12 @@ def add_favorite(fav: FavoriteIn, user_id: int = Depends(get_current_user)):
             "INSERT INTO favorites (user_id, attraction_id) VALUES (%s, %s) RETURNING id;",
             (user_id, attraction_id),
         )
-        conn.commit()
         new_id = cur.fetchone()[0]
+        conn.commit()
         return {"message": "Added to favorites", "id": new_id}
     finally:
         cur.close()
         conn.close()
-
 
 # ---------------- DELETE Favorite ----------------
 @router.delete("/{favorite_id}")
