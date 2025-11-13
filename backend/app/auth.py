@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends, Header, status
+from fastapi import APIRouter, HTTPException, Header, status
 from datetime import datetime, timedelta
 from app.database import get_db_connection
 import bcrypt
@@ -57,7 +57,7 @@ def login_user(email: str, password: str):
 
     # Generate JWT token
     expire = datetime.utcnow() + timedelta(hours=ACCESS_TOKEN_EXPIRE_HOURS)
-    payload = {"user_id": user_id, "exp": expire}
+    payload = {"user_id": user_id, "exp": expire.timestamp()}  # store exp as timestamp
     token = jwt.encode(payload, JWT_SECRET, algorithm=ALGORITHM)
 
     return {"access_token": token, "token_type": "bearer", "expires_at": expire.isoformat()}
@@ -67,44 +67,26 @@ def login_user(email: str, password: str):
 @router.get("/me")
 def get_current_user(authorization: str = Header(default=None, alias="Authorization")):
     """
-    Accepts Bearer token in header:
-        Authorization: Bearer <token>
+    Get current user info from Bearer token.
+    Works with Render / Swagger UI.
+    Header: Authorization: Bearer <access_token>
     """
     if not authorization:
         raise HTTPException(status_code=400, detail="Authorization header missing")
+
+    # Remove "Bearer " prefix and strip extra spaces
     if not authorization.startswith("Bearer "):
         raise HTTPException(status_code=400, detail="Invalid authorization header format")
-    
-    token = authorization.split(" ")[1]
+
+    token = authorization.replace("Bearer ", "").strip()
 
     try:
         payload = jwt.decode(token, JWT_SECRET, algorithms=[ALGORITHM])
-        return {"user_id": payload["user_id"]}
+        user_id = payload.get("user_id")
+        if not user_id:
+            raise HTTPException(status_code=401, detail="Invalid token payload")
+        return {"user_id": user_id}
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Token expired")
     except jwt.InvalidTokenError:
         raise HTTPException(status_code=401, detail="Invalid token")
-
-
-# -------- CHECK TOKEN VALIDITY --------
-@router.get("/token/validate")
-def check_token_validity(authorization: str = Header(...)):
-    """
-    Accepts Bearer token in header:
-        Authorization: Bearer <token>
-    Returns whether token is valid and its expiry time.
-    """
-    if not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=400, detail="Invalid authorization header format")
-    
-    token = authorization.split(" ")[1]
-
-    try:
-        payload = jwt.decode(token, JWT_SECRET, algorithms=[ALGORITHM])
-        exp_timestamp = payload.get("exp")
-        exp_datetime = datetime.utcfromtimestamp(exp_timestamp)
-        return {"valid": True, "expires_at": exp_datetime.isoformat()}
-    except jwt.ExpiredSignatureError:
-        return {"valid": False, "reason": "Token expired"}
-    except jwt.InvalidTokenError:
-        return {"valid": False, "reason": "Invalid token"}
