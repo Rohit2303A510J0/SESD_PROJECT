@@ -1,7 +1,8 @@
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
 from app.models import create_tables
-from app.auth import router as auth_router   # ✅ this line loads your auth routes
+from app.auth import router as auth_router   # ✅ Auth routes
+from app.location import router as location_router  # ✅ Location routes
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -14,8 +15,9 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Travel Snapshot API", lifespan=lifespan)
 
-# ✅ include the authentication router here
+# ✅ Include the routers
 app.include_router(auth_router)
+app.include_router(location_router)  # Added location service
 
 @app.get("/")
 def root():
