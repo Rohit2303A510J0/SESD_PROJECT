@@ -83,6 +83,52 @@
       cursor: pointer;
       font-size: 13px;
       margin-top: 6px;
+      transition: background 0.2s;
+    }
+
+    .attr-btn:hover {
+      background: #0ea5e9;
+    }
+
+    /* 🖼️ Attraction hover preview */
+    .image-preview {
+      display: flex;
+      justify-content: center;
+      gap: 6px;
+      margin-top: 6px;
+    }
+
+    .image-preview img {
+      width: 50px;
+      height: 50px;
+      object-fit: cover;
+      border-radius: 5px;
+      border: 1px solid #334155;
+      transition: transform 0.2s;
+    }
+
+    .image-preview img:hover {
+      transform: scale(1.4);
+      z-index: 10;
+    }
+
+    /* 📘 Wikipedia button */
+    .wiki-btn {
+      display: inline-block;
+      background: #334155;
+      border: 1px solid #38bdf8;
+      color: #38bdf8;
+      padding: 5px 10px;
+      border-radius: 5px;
+      text-decoration: none;
+      font-size: 13px;
+      margin-top: 8px;
+      transition: background 0.2s, color 0.2s;
+    }
+
+    .wiki-btn:hover {
+      background: #38bdf8;
+      color: #0f172a;
     }
   </style>
 </head>
@@ -174,10 +220,17 @@
     // 📍 Add markers for attractions
     function addAttractionMarker(attraction, countryName) {
       const marker = L.marker([attraction.lat, attraction.lng]).addTo(map);
+
+      const images = attraction.images?.slice(0, 4) || [];
+      const imageGallery = images
+        .map(img => `<img src="${img}" alt="img" />`)
+        .join("");
+
       const popup = `
         <div>
           <b>${attraction.name}</b><br>
           ${attraction.description || ""}<br>
+          <div class="image-preview">${imageGallery}</div>
           <button class="attr-btn" onclick="addFavorite('${countryName}', ${JSON.stringify(attraction).replace(/"/g, '&quot;')})">
             ❤️ Favorite
           </button>
@@ -220,6 +273,8 @@
                     ? [info.latlng[0], info.latlng[1]]
                     : e.latlng;
 
+                  const wikiUrl = `https://en.wikipedia.org/wiki/${encodeURIComponent(info.name)}`;
+
                   const content = `
                     <div>
                       <img src="${info.flag}" class="flag" />
@@ -227,6 +282,7 @@
                       Capital: ${info.capital}<br>
                       Currency: ${info.currency}<br>
                       Temp: ${weather?.weather?.temperature ?? "N/A"}°C<br>
+                      <a href="${wikiUrl}" target="_blank" class="wiki-btn">📘 Wikipedia</a><br>
                       <button class="attr-btn" onclick="addFavorite('${info.name}')">❤️ Favorite Country</button>
                     </div>
                   `;
