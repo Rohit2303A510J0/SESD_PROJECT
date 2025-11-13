@@ -2,8 +2,13 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Optional
 from app.database import get_db_connection
+import requests
+import os
 
 router = APIRouter(prefix="/attractions", tags=["Attractions"])
+
+UNSPLASH_ACCESS_KEY = os.getenv("UNSPLASH_ACCESS_KEY")
+UNSPLASH_URL = "https://api.unsplash.com/search/photos"
 
 # ---------------- Pydantic models ----------------
 class AttractionCreate(BaseModel):
@@ -18,25 +23,52 @@ class AttractionCreate(BaseModel):
     image4: Optional[str] = None
     status: Optional[str] = "available"  # default
 
+# ---------------- Helper to fetch images ----------------
+def fetch_images_from_unsplash(query: str, per_page: int = 4):
+    if not UNSPLASH_ACCESS_KEY:
+        return []
+    try:
+        response = requests.get(
+            UNSPLASH_URL,
+            headers={"Authorization": f"Client-ID {UNSPLASH_ACCESS_KEY}"},
+            params={"query": query, "per_page": per_page}
+        )
+        data = response.json()
+        images = [result["urls"]["regular"] for result in data.get("results", [])]
+        return images
+    except Exception:
+        return []
+
 # ---------------- Endpoints ----------------
 @router.post("/")
 def add_attraction(attraction: AttractionCreate):
     """
     Add a new attraction to the database.
-    Can be used directly from Swagger UI.
+    If images are not provided, fetch 4 images from Unsplash using the attraction name.
     """
     conn = get_db_connection()
     cur = conn.cursor()
 
     try:
+        # Check if attraction already exists
+        cur.execute("SELECT id, image1 FROM attractions WHERE country=%s AND name=%s;", (attraction.country, attraction.name))
+        existing = cur.fetchone()
+        if existing:
+            return {"message": "Attraction already exists", "id": existing[0]}
+
+        # Fetch images if not provided
+        images = [attraction.image1, attraction.image2, attraction.image3, attraction.image4]
+        if not any(images):
+            fetched_images = fetch_images_from_unsplash(attraction.name)
+            images = fetched_images + [None]*(4 - len(fetched_images))  # pad to 4
+
         cur.execute("""
             INSERT INTO attractions (country, name, lat, lng, description, image1, image2, image3, image4, status)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             RETURNING id;
         """, (
             attraction.country, attraction.name, attraction.lat, attraction.lng,
-            attraction.description, attraction.image1, attraction.image2,
-            attraction.image3, attraction.image4, attraction.status
+            attraction.description, images[0], images[1], images[2], images[3], attraction.status
         ))
 
         new_id = cur.fetchone()[0]
