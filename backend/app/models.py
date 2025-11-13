@@ -19,14 +19,11 @@ def create_tables():
     CREATE TABLE IF NOT EXISTS favorites (
         id SERIAL PRIMARY KEY,
         user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-        place_name TEXT NOT NULL,
-        place_type TEXT,
-        country_code TEXT,
-        image_url TEXT,
-        map_url TEXT,
+        attraction_id INTEGER REFERENCES attractions(id) ON DELETE CASCADE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
     """)
+
 
     # Attractions table
     cur.execute("""
