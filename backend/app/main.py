@@ -6,6 +6,7 @@ from app.location import router as location_router  # ✅ Location routes
 from app.images import router as images_router      # ✅ Images service
 from app.weather import router as weather_router    # ✅ Weather service
 from app.attractions import router as attractions_router  # ✅ Attractions service
+from app.favorites import router as favorites_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -24,6 +25,7 @@ app.include_router(location_router)
 app.include_router(images_router)
 app.include_router(weather_router)
 app.include_router(attractions_router)  # Add attractions routes
+app.include_router(favorites_router)
 
 @app.get("/")
 def root():
