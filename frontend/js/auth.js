@@ -21,7 +21,7 @@ if (loginForm) {
 
       localStorage.setItem("access_token", data.access_token);
       alert("✅ Login successful!");
-      window.location.href = "test.html";
+      window.location.href = "map.html";
     } catch (err) {
       alert("❌ " + err.message);
       console.error("Login error:", err);

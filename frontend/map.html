@@ -1,53 +1,192 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Backend Test Page</title>
-  <link rel="stylesheet" href="map.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Interactive World Map</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <style>
+    body {
+      margin: 0;
+      background-color: #0f172a;
+      color: #f1f5f9;
+      font-family: "Poppins", sans-serif;
+      display: flex;
+      height: 100vh;
+    }
+
+    #map {
+      flex: 2;
+      height: 100%;
+      width: 100%;
+    }
+
+    #info {
+      flex: 1;
+      padding: 20px;
+      background: #1e293b;
+      overflow-y: auto;
+    }
+
+    h2 {
+      color: #38bdf8;
+    }
+
+    button {
+      background: #38bdf8;
+      border: none;
+      color: #0f172a;
+      padding: 8px 16px;
+      border-radius: 5px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+
+    img.flag {
+      width: 80px;
+      height: auto;
+      border-radius: 5px;
+    }
+
+    .attr-card {
+      background: #0f172a;
+      padding: 10px;
+      margin-top: 10px;
+      border-radius: 6px;
+      border: 1px solid #38bdf8;
+    }
+  </style>
 </head>
 <body>
-  <h2>🌍 Backend Testing Interface</h2>
-  <p>This page tests all API endpoints (Render backend) from GitHub frontend.</p>
-
-  <div class="section">
-    <h3>🔑 Authentication</h3>
-    <input type="email" id="email" placeholder="Email" />
-    <input type="password" id="password" placeholder="Password" />
-    <button id="loginBtn">Login</button>
-    <button id="registerBtn">Register</button>
-    <button id="logoutBtn">Logout</button>
-    <p id="authStatus"></p>
+  <div id="map"></div>
+  <div id="info">
+    <h2>Click on a country</h2>
+    <div id="details"></div>
   </div>
 
-  <div class="section">
-    <h3>📍 Location</h3>
-    <input type="text" id="countryInput" placeholder="Enter country name" />
-    <button id="getLocationBtn">Get Location</button>
-    <pre id="locationOutput"></pre>
-  </div>
+  <script>
+    const BASE_URL = "https://sesd-project-7gqa.onrender.com";
+    const token = localStorage.getItem("access_token"); // stored during login
 
-  <div class="section">
-    <h3>☁️ Weather</h3>
-    <button id="getWeatherBtn">Get Weather</button>
-    <pre id="weatherOutput"></pre>
-  </div>
+    const map = L.map("map").setView([20, 0], 2);
 
-  <div class="section">
-    <h3>🏛 Attractions</h3>
-    <button id="getAttractionsBtn">Get Attractions</button>
-    <pre id="attractionsOutput"></pre>
-  </div>
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: "© OpenStreetMap contributors"
+    }).addTo(map);
 
-  <div class="section">
-    <h3>❤️ Favorites</h3>
-    <button id="getFavoritesBtn">Get Favorites</button>
-    <input type="number" id="favAttractionId" placeholder="Attraction ID" />
-    <button id="addFavoriteBtn">Add Favorite</button>
-    <button id="deleteFavoriteBtn">Delete Favorite</button>
-    <pre id="favoritesOutput"></pre>
-  </div>
+    // Highlight clicked country boundaries
+    let geojsonLayer;
 
-  <script src="map.js"></script>
+    async function fetchCountryData(name) {
+      try {
+        const res = await fetch(`${BASE_URL}/location/${encodeURIComponent(name)}`);
+        if (!res.ok) throw new Error("Country info failed");
+        return await res.json();
+      } catch (err) {
+        console.error(err);
+        return null;
+      }
+    }
+
+    async function fetchWeather(lat, lng) {
+      try {
+        const res = await fetch(`${BASE_URL}/weather?lat=${lat}&lng=${lng}`);
+        if (!res.ok) throw new Error("Weather fetch failed");
+        return await res.json();
+      } catch (err) {
+        console.error(err);
+        return null;
+      }
+    }
+
+    async function fetchAttractions(name) {
+      try {
+        const res = await fetch(`${BASE_URL}/attractions/${encodeURIComponent(name)}`);
+        if (!res.ok) throw new Error("Attractions fetch failed");
+        return await res.json();
+      } catch (err) {
+        console.error(err);
+        return null;
+      }
+    }
+
+    async function addFavorite(name) {
+      if (!token) {
+        alert("Please log in first!");
+        return;
+      }
+      try {
+        const res = await fetch(`${BASE_URL}/favorites/`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`,
+          },
+          body: JSON.stringify({ country_name: name }),
+        });
+        const data = await res.json();
+        alert(data.message || "Added to favorites!");
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    // Load country borders (GeoJSON)
+    fetch("https://raw.githubusercontent.com/johan/world.geo.json/master/countries.geo.json")
+      .then(res => res.json())
+      .then(data => {
+        geojsonLayer = L.geoJson(data, {
+          style: {
+            color: "#38bdf8",
+            weight: 1,
+            fillOpacity: 0.2,
+          },
+          onEachFeature: function (feature, layer) {
+            const name = feature.properties.name;
+            layer.on({
+              mouseover: (e) => {
+                e.target.setStyle({ fillOpacity: 0.5, color: "#facc15" });
+              },
+              mouseout: (e) => {
+                e.target.setStyle({ fillOpacity: 0.2, color: "#38bdf8" });
+              },
+              click: async (e) => {
+                map.fitBounds(layer.getBounds());
+                const info = await fetchCountryData(name);
+                if (!info) return;
+
+                const weather = await fetchWeather(info.latlng[0], info.latlng[1]);
+                const attractions = await fetchAttractions(name);
+
+                const detailsDiv = document.getElementById("details");
+                detailsDiv.innerHTML = `
+                  <h2>${info.name}</h2>
+                  <img src="${info.flag}" class="flag" />
+                  <p><b>Capital:</b> ${info.capital}</p>
+                  <p><b>Currency:</b> ${info.currency}</p>
+                  <p><b>Languages:</b> ${info.languages.join(", ")}</p>
+                  <p><b>Population:</b> ${info.population?.toLocaleString() || "Unknown"}</p>
+                  <p><b>Region:</b> ${info.region}</p>
+                  <p><b>Weather:</b> ${weather?.weather?.temperature ?? "N/A"}°C</p>
+                  <button onclick="addFavorite('${info.name}')">❤️ Add to Favorites</button>
+                  <h3>Attractions</h3>
+                  ${
+                    attractions?.attractions?.length
+                      ? attractions.attractions.map(a => `
+                        <div class='attr-card'>
+                          <b>${a.name}</b><br>
+                          ${a.description || ""}
+                        </div>`).join("")
+                      : "<p>No attractions available.</p>"
+                  }
+                `;
+              }
+            });
+          }
+        }).addTo(map);
+      })
+      .catch(err => console.error("GeoJSON load failed", err));
+  </script>
 </body>
 </html>
