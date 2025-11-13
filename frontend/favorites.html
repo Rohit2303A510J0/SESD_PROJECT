@@ -57,7 +57,7 @@
     const BASE_URL = "https://sesd-project-7gqa.onrender.com";
     const token = localStorage.getItem("access_token");
 
-    console.log("✅ Access Token:", token); // 🔍 Log token for debugging
+    console.log("✅ Access Token:", token);
 
     if (!token) {
       alert("Please log in first.");
@@ -69,8 +69,11 @@
       const loadingEl = document.getElementById("loading");
       const noFavEl = document.getElementById("noFavorites");
 
+      loadingEl.classList.remove("d-none");
+      listEl.classList.add("d-none");
+      noFavEl.classList.add("d-none");
+
       try {
-        console.log("Fetching favorites...");
         const res = await fetch(`${BASE_URL}/favorites/`, {
           method: "GET",
           headers: {
@@ -79,22 +82,15 @@
           },
         });
 
-        console.log("Response status:", res.status);
-
-        loadingEl.classList.add("d-none");
-
-        if (res.status === 405) {
-          alert("❌ Backend route /favorites/ (GET) not implemented yet. Please add it in FastAPI.");
-          return;
-        }
-
         if (!res.ok) {
-          const errText = await res.text();
-          throw new Error(`Failed to fetch favorites: ${res.status} ${errText}`);
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.detail || "Failed to fetch favorites");
         }
 
         const data = await res.json();
         const favorites = data.favorites || [];
+
+        loadingEl.classList.add("d-none");
 
         if (favorites.length === 0) {
           noFavEl.classList.remove("d-none");
@@ -104,10 +100,9 @@
         listEl.classList.remove("d-none");
         listEl.innerHTML = "";
 
-        favorites.forEach((fav) => {
+        favorites.forEach(fav => {
           const card = document.createElement("div");
           card.className = "col-md-4";
-
           const imgSrc = fav.image || "https://via.placeholder.com/400x250?text=No+Image";
           card.innerHTML = `
             <div class="card favorite-card">
@@ -136,14 +131,15 @@
       try {
         const res = await fetch(`${BASE_URL}/favorites/${id}`, {
           method: "DELETE",
-          headers: { Authorization: `Bearer ${token}` },
+          headers: { "Authorization": `Bearer ${token}` },
         });
 
         if (!res.ok) {
-          throw new Error("Failed to remove favorite");
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.detail || "Failed to remove favorite");
         }
 
-        alert("Removed successfully!");
+        // Reload the favorites list
         loadFavorites();
       } catch (err) {
         alert("Error: " + err.message);
@@ -155,6 +151,7 @@
       window.location.href = "login.html";
     });
 
+    // Load favorites on page load
     loadFavorites();
   </script>
 </body>

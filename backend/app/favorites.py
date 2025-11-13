@@ -15,7 +15,10 @@ def get_current_user(authorization: str = Header(...)):
             raise HTTPException(status_code=401, detail="Invalid authorization header")
         token = authorization.split(" ")[1]
         payload = jwt.decode(token, JWT_SECRET, algorithms=[ALGORITHM])
-        return payload.get("user_id")
+        user_id = payload.get("user_id")
+        if not user_id:
+            raise HTTPException(status_code=401, detail="Invalid token payload")
+        return user_id
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Token expired")
     except Exception:
@@ -55,16 +58,21 @@ def add_favorite(attraction_id: int, user_id: int = Depends(get_current_user)):
     conn = get_db_connection()
     cur = conn.cursor()
     try:
-        cur.execute("SELECT id FROM favorites WHERE user_id=%s AND attraction_id=%s;", (user_id, attraction_id))
+        # Check if already favorited
+        cur.execute(
+            "SELECT id FROM favorites WHERE user_id=%s AND attraction_id=%s;",
+            (user_id, attraction_id)
+        )
         if cur.fetchone():
             raise HTTPException(status_code=400, detail="Already in favorites")
 
+        # Insert favorite
         cur.execute(
             "INSERT INTO favorites (user_id, attraction_id) VALUES (%s, %s) RETURNING id;",
-            (user_id, attraction_id),
+            (user_id, attraction_id)
         )
-        conn.commit()
         new_id = cur.fetchone()[0]
+        conn.commit()
         return {"message": "Added to favorites", "id": new_id}
     finally:
         cur.close()
@@ -77,7 +85,10 @@ def remove_favorite(favorite_id: int, user_id: int = Depends(get_current_user)):
     conn = get_db_connection()
     cur = conn.cursor()
     try:
-        cur.execute("DELETE FROM favorites WHERE id=%s AND user_id=%s RETURNING id;", (favorite_id, user_id))
+        cur.execute(
+            "DELETE FROM favorites WHERE id=%s AND user_id=%s RETURNING id;",
+            (favorite_id, user_id)
+        )
         deleted = cur.fetchone()
         if not deleted:
             raise HTTPException(status_code=404, detail="Favorite not found")

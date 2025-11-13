@@ -1,131 +1,122 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Travel Snapshot — Map</title>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Travel Snapshot — Map</title>
 
-  <!-- Leaflet -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<!-- Leaflet -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
-  <style>
-    :root{
-      --bg:#0f172a; --card:#0f172a; --panel:#111827; --accent:#00bfa6; --muted:#94a3b8; --soft:#1f2937;
-    }
-    *{box-sizing:border-box}
-    html,body{height:100%;margin:0;font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial;background:var(--bg);color:#e6eef6}
-    /* Navbar */
-    .topbar{height:56px;background:#0b1220;border-bottom:1px solid #142032;display:flex;align-items:center;justify-content:space-between;padding:0 18px;z-index:1200}
-    .brand{display:flex;align-items:center;gap:10px}
-    .brand .logo{font-size:16px;color:var(--accent);font-weight:700}
-    .navlinks a{color:#dbe9ef;text-decoration:none;margin-left:16px;font-weight:600}
-    .navlinks a:hover{color:var(--accent)}
-    .container{display:flex;height:calc(100% - 56px);overflow:hidden}
-    /* Map */
-    #map{flex:1;height:100%}
-    /* Sidebar */
-    .sidebar{width:380px;background:#0f172a;border-left:1px solid #142032;padding:16px;overflow:auto}
-    .sidebar h2{color:var(--accent);margin:0 0 8px 0}
-    .meta{display:flex;gap:12px;align-items:center}
-    .flag{width:76px;height:auto;border-radius:6px;border:1px solid #1f2937}
-    .meta .info{font-size:14px}
-    .muted{color:var(--muted);font-size:13px}
-    .section{margin-top:14px}
-    .attraction-list{margin-top:8px;display:flex;flex-direction:column;gap:8px}
-    .attraction-item{background:#0b1726;padding:10px;border-radius:8px;border:1px solid #122435;display:flex;gap:10px;align-items:flex-start}
-    .attr-thumb{width:84px;height:64px;border-radius:6px;object-fit:cover;border:1px solid #21303b}
-    .attr-body{flex:1}
-    .attr-title{font-weight:700;margin:0 0 6px 0}
-    .attr-desc{margin:0;font-size:13px;color:var(--muted)}
-    .gallery{display:flex;gap:6px;margin-top:8px}
-    .gallery img{width:64px;height:48px;object-fit:cover;border-radius:6px;border:1px solid #21303b;transition:transform .18s}
-    .gallery img:hover{transform:scale(1.2);z-index:5}
-    .btn{background:var(--accent);border:none;color:#071217;padding:8px 10px;border-radius:6px;font-weight:700;cursor:pointer}
-    .small-btn{background:#1f2937;border:none;color:#e6eef6;padding:6px 8px;border-radius:6px;cursor:pointer}
-    .center{display:flex;align-items:center;gap:8px}
-    /* Loading overlay */
-    .loading-overlay{position:absolute;left:0;top:56px;right:0;bottom:0;display:none;align-items:center;justify-content:center;background:rgba(2,6,23,0.6);z-index:2000}
-    .spinner{width:72px;height:72px;border-radius:50%;border:8px solid rgba(255,255,255,0.08);border-top-color:var(--accent);animation:spin 1s linear infinite;display:inline-block}
-    @keyframes spin{to{transform:rotate(360deg)}}
-    /* Responsive */
-    @media(max-width:920px){.sidebar{width:320px}}
-    @media(max-width:720px){.sidebar{display:none}}
-  </style>
+<style>
+:root{
+  --bg:#0f172a; --card:#0f172a; --panel:#111827; --accent:#00bfa6; --muted:#94a3b8; --soft:#1f2937;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial;background:var(--bg);color:#e6eef6}
+/* Navbar */
+.topbar{height:56px;background:#0b1220;border-bottom:1px solid #142032;display:flex;align-items:center;justify-content:space-between;padding:0 18px;z-index:1200}
+.brand{display:flex;align-items:center;gap:10px}
+.brand .logo{font-size:16px;color:var(--accent);font-weight:700}
+.navlinks a{color:#dbe9ef;text-decoration:none;margin-left:16px;font-weight:600}
+.navlinks a:hover{color:var(--accent)}
+.container{display:flex;height:calc(100% - 56px);overflow:hidden}
+/* Map */
+#map{flex:1;height:100%}
+/* Sidebar */
+.sidebar{width:380px;background:#0f172a;border-left:1px solid #142032;padding:16px;overflow:auto}
+.sidebar h2{color:var(--accent);margin:0 0 8px 0}
+.meta{display:flex;gap:12px;align-items:center}
+.flag{width:76px;height:auto;border-radius:6px;border:1px solid #1f2937}
+.meta .info{font-size:14px}
+.muted{color:var(--muted);font-size:13px}
+.section{margin-top:14px}
+.attraction-list{margin-top:8px;display:flex;flex-direction:column;gap:8px}
+.attraction-item{background:#0b1726;padding:10px;border-radius:8px;border:1px solid #122435;display:flex;gap:10px;align-items:flex-start;cursor:pointer;}
+.attr-thumb{width:84px;height:64px;border-radius:6px;object-fit:cover;border:1px solid #21303b}
+.attr-body{flex:1}
+.attr-title{font-weight:700;margin:0 0 6px 0}
+.attr-desc{margin:0;font-size:13px;color:var(--muted)}
+.gallery{display:flex;gap:6px;margin-top:8px}
+.gallery img{width:64px;height:48px;object-fit:cover;border-radius:6px;border:1px solid #21303b;transition:transform .18s}
+.gallery img:hover{transform:scale(1.2);z-index:5}
+.btn{background:var(--accent);border:none;color:#071217;padding:8px 10px;border-radius:6px;font-weight:700;cursor:pointer}
+.small-btn{background:#1f2937;border:none;color:#e6eef6;padding:6px 8px;border-radius:6px;cursor:pointer}
+.center{display:flex;align-items:center;gap:8px}
+/* Loading overlay */
+.loading-overlay{position:absolute;left:0;top:56px;right:0;bottom:0;display:none;align-items:center;justify-content:center;background:rgba(2,6,23,0.6);z-index:2000}
+.spinner{width:72px;height:72px;border-radius:50%;border:8px solid rgba(255,255,255,0.08);border-top-color:var(--accent);animation:spin 1s linear infinite;display:inline-block}
+@keyframes spin{to{transform:rotate(360deg)}}
+/* Responsive */
+@media(max-width:920px){.sidebar{width:320px}}
+@media(max-width:720px){.sidebar{display:none}}
+</style>
 </head>
 <body>
-  <div class="topbar">
-    <div class="brand">
-      <div class="logo">🌍 Travel Snapshot</div>
-      <div class="muted" style="margin-left:8px">Interactive Map</div>
-    </div>
-    <div class="navlinks">
-      <a href="index.html">Home</a>
-      <a href="map.html">Map</a>
-      <a href="favorites.html">Favorites</a>
-      <a href="#" id="logout">Logout</a>
-    </div>
+<div class="topbar">
+  <div class="brand">
+    <div class="logo">🌍 Travel Snapshot</div>
+    <div class="muted" style="margin-left:8px">Interactive Map</div>
   </div>
-
-  <div class="container">
-    <div id="map"></div>
-
-    <aside class="sidebar" id="sidebar">
-      <h2 id="countryName">Click a country</h2>
-      <div id="countryBox" class="meta">
-        <!-- flag + info -->
-        <img id="flagImg" class="flag" src="" alt="" style="display:none" />
-        <div class="info">
-          <div id="cap">Capital —</div>
-          <div id="reg" class="muted">Region —</div>
-          <div id="pop" class="muted">Population —</div>
-          <div id="cur" class="muted">Currency —</div>
-        </div>
-      </div>
-
-      <div class="section">
-        <div class="center">
-          <div class="muted">Weather:</div>
-          <div id="weatherText" style="margin-left:auto" class="muted">—</div>
-        </div>
-      </div>
-
-      <div class="section">
-        <div style="display:flex;justify-content:space-between;align-items:center">
-          <div class="muted">Attractions</div>
-          <button id="refreshAttractions" class="small-btn">Refresh</button>
-        </div>
-
-        <div class="attraction-list" id="attractionList">
-          <!-- items injected here -->
-        </div>
-      </div>
-    </aside>
+  <div class="navlinks">
+    <a href="index.html">Home</a>
+    <a href="map.html">Map</a>
+    <a href="favorites.html">Favorites</a>
+    <a href="#" id="logout">Logout</a>
   </div>
+</div>
 
-  <div class="loading-overlay" id="loading">
-    <div style="text-align:center">
-      <div class="spinner"></div>
-      <div style="margin-top:12px;color:#cfeff4">Loading…</div>
+<div class="container">
+  <div id="map"></div>
+
+  <aside class="sidebar" id="sidebar">
+    <h2 id="countryName">Click a country</h2>
+    <div id="countryBox" class="meta">
+      <img id="flagImg" class="flag" src="" alt="" style="display:none" />
+      <div class="info">
+        <div id="cap">Capital —</div>
+        <div id="reg" class="muted">Region —</div>
+        <div id="pop" class="muted">Population —</div>
+        <div id="cur" class="muted">Currency —</div>
+      </div>
     </div>
+
+    <div class="section">
+      <div class="center">
+        <div class="muted">Weather:</div>
+        <div id="weatherText" style="margin-left:auto" class="muted">—</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div class="muted">Attractions</div>
+        <button id="refreshAttractions" class="small-btn">Refresh</button>
+      </div>
+      <div class="attraction-list" id="attractionList"></div>
+    </div>
+  </aside>
+</div>
+
+<div class="loading-overlay" id="loading">
+  <div style="text-align:center">
+    <div class="spinner"></div>
+    <div style="margin-top:12px;color:#cfeff4">Loading…</div>
   </div>
+</div>
 
 <script>
 (() => {
-  const BASE_URL = "https://sesd-project-7gqa.onrender.com"; // ← your Render backend
+  const BASE_URL = "https://sesd-project-7gqa.onrender.com";
   const token = localStorage.getItem("access_token");
 
-  // Map init
   const map = L.map('map', { minZoom:2, worldCopyJump:true }).setView([20,0],2);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap contributors' }).addTo(map);
 
-  // Globals
   let geojsonLayer = null;
   let attractionMarkers = [];
   const loadingEl = document.getElementById('loading');
-  const sidebar = document.getElementById('sidebar');
-
-  // UI refs
   const countryNameEl = document.getElementById('countryName');
   const flagImg = document.getElementById('flagImg');
   const capEl = document.getElementById('cap');
@@ -138,254 +129,119 @@
 
   document.getElementById('logout').addEventListener('click', () => {
     localStorage.removeItem('access_token');
-    alert('Logged out');
     window.location.href = 'login.html';
   });
 
-  function showLoading(show=true){
-    loadingEl.style.display = show ? 'flex' : 'none';
-  }
+  function showLoading(show=true){ loadingEl.style.display = show ? 'flex' : 'none'; }
 
-  // Helpers: API calls
-  async function getCountryInfo(name){
-    const res = await fetch(`${BASE_URL}/location/${encodeURIComponent(name)}`);
-    if(!res.ok) throw new Error('Country info failed');
-    return await res.json();
-  }
-  async function getWeather(lat,lng){
-    const res = await fetch(`${BASE_URL}/weather?lat=${lat}&lng=${lng}`);
-    if(!res.ok) return null;
-    return await res.json();
-  }
-  async function getAttractions(country){
-    const res = await fetch(`${BASE_URL}/attractions/${encodeURIComponent(country)}`);
-    if(!res.ok) return {country, attractions:[]};
-    return await res.json();
-  }
+  async function getCountryInfo(name){ const res = await fetch(`${BASE_URL}/location/${encodeURIComponent(name)}`); if(!res.ok) return null; return await res.json(); }
+  async function getWeather(lat,lng){ if(!lat||!lng) return null; const res = await fetch(`${BASE_URL}/weather?lat=${lat}&lng=${lng}`); if(!res.ok) return null; return await res.json(); }
+  async function getAttractions(country){ const res = await fetch(`${BASE_URL}/attractions/${encodeURIComponent(country)}`); if(!res.ok) return {attractions:[]}; return await res.json(); }
 
-  // Favorites: expects attraction_id
   async function favoriteAttraction(attractionId){
-    if(!token) { alert('Please log in first'); return; }
+    if(!token) { alert('Login required'); return; }
     showLoading(true);
     try {
-      const res = await fetch(`${BASE_URL}/favorites/`, {
+      const res = await fetch(`${BASE_URL}/favorites/${attractionId}`, {
         method:'POST',
-        headers:{ 'Content-Type':'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ attraction_id: attractionId })
+        headers:{ 'Authorization': `Bearer ${token}` },
       });
-      const data = await res.json();
-      if(!res.ok) throw new Error(data.detail || 'Failed to favorite');
-      alert('Added to favorites');
-    } catch(err){
-      console.error(err);
-      alert('Error: ' + (err.message || err));
-    } finally { showLoading(false); }
+      if(!res.ok) { const data = await res.json().catch(()=>({})); throw new Error(data.detail || 'Failed to favorite'); }
+      alert('Added to favorites!');
+    } catch(err){ console.error(err); alert('Error: '+err.message); }
+    finally{ showLoading(false); }
   }
 
-  // Add marker and bind popup, using proper images & favorite by id
-  function addAttractionMarker(attr, countryName){
+  function addAttractionMarker(attr){
     if(!attr || !attr.lat || !attr.lng) return;
     const marker = L.marker([attr.lat, attr.lng]).addTo(map);
-    // images small preview inside popup (use up to 4)
-    const imgs = (attr.images && attr.images.length) ? attr.images.slice(0,4) : [];
+    const imgs = (attr.images||[]).slice(0,4);
     const imgHtml = imgs.map(u=>`<img src="${u}" style="width:88px;height:66px;object-fit:cover;border-radius:6px;margin-right:6px;border:1px solid #123">`).join('');
-
-    // Popup content: description + images + favorite button (uses attraction.id)
-    const popupHtml = `
-      <div style="max-width:260px">
-        <strong style="font-size:15px">${escapeHtml(attr.name)}</strong>
-        <div style="margin-top:6px;font-size:13px;color:#9fb4bf">${escapeHtml(attr.description||'')}</div>
-        <div style="margin-top:8px">${imgHtml}</div>
-        <div style="margin-top:8px;display:flex;gap:8px;justify-content:flex-end">
-          <button class="btn" data-attrid="${attr.id}">❤️ Favorite</button>
-        </div>
-      </div>
-    `;
+    const wikiLink = attr.name ? `<a href="https://en.wikipedia.org/wiki/${encodeURIComponent(attr.name)}" target="_blank" class="small-btn">Wiki</a>` : '';
+    const popupHtml = `<div style="max-width:260px"><strong>${attr.name}</strong><div style="font-size:13px;color:#9fb4bf">${attr.description||''}</div><div style="margin-top:8px">${imgHtml}</div><div style="margin-top:8px;display:flex;gap:6px;justify-content:flex-end"><button class="btn" data-id="${attr.id}">❤️ Favorite</button>${wikiLink}</div></div>`;
     marker.bindPopup(popupHtml);
-    marker.on('popupopen', (e) => {
-      // attach click listener for favorite button inside popup (DOM exists now)
-      const btn = document.querySelector('.leaflet-popup .btn[data-attrid]');
-      if(btn){
-        btn.addEventListener('click', () => favoriteAttraction(attr.id));
-      }
+    marker.on('popupopen', ()=> {
+      const btn = document.querySelector('.leaflet-popup .btn[data-id]');
+      if(btn) btn.addEventListener('click', ()=>favoriteAttraction(attr.id));
     });
     attractionMarkers.push(marker);
   }
 
-  function clearAttractionMarkers(){
-    attractionMarkers.forEach(m=>map.removeLayer(m));
-    attractionMarkers = [];
-  }
+  function clearAttractionMarkers(){ attractionMarkers.forEach(m=>map.removeLayer(m)); attractionMarkers=[]; }
 
-  // Build attraction list in sidebar (with hover gallery)
-  function renderAttractionList(list, countryName){
-    attractionList.innerHTML = '';
-    if(!list || !list.length){
-      attractionList.innerHTML = '<div class="muted" style="padding:8px">No attractions available.</div>';
-      return;
-    }
+  function renderAttractionList(list){
+    attractionList.innerHTML='';
+    if(!list.length){ attractionList.innerHTML='<div class="muted">No attractions available</div>'; return; }
     list.forEach(attr=>{
-      const item = document.createElement('div');
-      item.className = 'attraction-item';
-
-      // thumbnail uses first image if available
-      const thumb = document.createElement('img');
-      thumb.className = 'attr-thumb';
-      thumb.src = (attr.images && attr.images.length)? attr.images[0] : 'https://via.placeholder.com/84x64?text=No+Img';
-      thumb.alt = attr.name;
-
-      const body = document.createElement('div');
-      body.className = 'attr-body';
-
-      const title = document.createElement('div');
-      title.className = 'attr-title';
-      title.textContent = attr.name;
-
-      const desc = document.createElement('p');
-      desc.className='attr-desc';
-      desc.textContent = attr.description || '';
-
-      // gallery hidden by default, shows on hover
-      const gallery = document.createElement('div');
-      gallery.className = 'gallery';
-      if(attr.images && attr.images.length){
-        attr.images.slice(0,4).forEach(u=>{
-          const im = document.createElement('img');
-          im.src = u;
-          gallery.appendChild(im);
-        });
-      }
-
-      // favorite small button in list
-      const favBtn = document.createElement('button');
-      favBtn.className = 'small-btn';
-      favBtn.textContent = '❤️ Favorite';
-      favBtn.addEventListener('click', (ev) => {
-        ev.stopPropagation();
-        favoriteAttraction(attr.id);
+      const item=document.createElement('div'); item.className='attraction-item';
+      const thumb=document.createElement('img'); thumb.className='attr-thumb'; thumb.src=(attr.images&&attr.images.length)?attr.images[0]:'https://via.placeholder.com/84x64?text=No+Img';
+      const body=document.createElement('div'); body.className='attr-body';
+      const title=document.createElement('div'); title.className='attr-title'; title.textContent=attr.name;
+      const desc=document.createElement('p'); desc.className='attr-desc'; desc.textContent=attr.description||'';
+      const gallery=document.createElement('div'); gallery.className='gallery';
+      if(attr.images) attr.images.slice(0,4).forEach(u=>{ const im=document.createElement('img'); im.src=u; gallery.appendChild(im); });
+      const favBtn=document.createElement('button'); favBtn.className='small-btn'; favBtn.textContent='❤️ Favorite'; favBtn.addEventListener('click',e=>{ e.stopPropagation(); favoriteAttraction(attr.id); });
+      const wikiBtn=document.createElement('a'); wikiBtn.className='small-btn'; wikiBtn.href=`https://en.wikipedia.org/wiki/${encodeURIComponent(attr.name)}`; wikiBtn.target='_blank'; wikiBtn.textContent='Wiki';
+      body.appendChild(title); body.appendChild(desc); body.appendChild(gallery); body.appendChild(favBtn); body.appendChild(wikiBtn);
+      item.appendChild(thumb); item.appendChild(body);
+      item.addEventListener('mouseenter',()=>gallery.style.display='flex'); item.addEventListener('mouseleave',()=>gallery.style.display='none');
+      item.addEventListener('click',()=>{
+        if(attr.lat&&attr.lng){ map.setView([attr.lat,attr.lng],Math.max(8,map.getZoom())); const mk=attractionMarkers.find(m=>Math.abs(m.getLatLng().lat-attr.lat)<0.0001&&Math.abs(m.getLatLng().lng-attr.lng)<0.0001); if(mk) mk.openPopup(); }
       });
-
-      body.appendChild(title);
-      body.appendChild(desc);
-      body.appendChild(gallery);
-      body.appendChild(favBtn);
-
-      item.appendChild(thumb);
-      item.appendChild(body);
-
-      // hover: show gallery (we'll toggle class)
-      item.addEventListener('mouseenter', () => { gallery.style.display = 'flex'; });
-      item.addEventListener('mouseleave', () => { gallery.style.display = 'none'; });
-
-      // click on list item: pan to marker and open popup
-      item.addEventListener('click', () => {
-        if(attr.lat && attr.lng){
-          map.setView([attr.lat, attr.lng], Math.max(8, map.getZoom()));
-          // find marker and open popup
-          const mk = attractionMarkers.find(m => {
-            const latlng = m.getLatLng();
-            return Math.abs(latlng.lat - attr.lat) < 0.0001 && Math.abs(latlng.lng - attr.lng) < 0.0001;
-          });
-          if(mk) mk.openPopup();
-        }
-      });
-
       attractionList.appendChild(item);
     });
-    // hide galleries initially
     document.querySelectorAll('.gallery').forEach(g=>g.style.display='none');
   }
 
-  // Escape HTML helper
-  function escapeHtml(s){ return String(s||'').replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]) ); }
+  function escapeHtml(s){ return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
-  // Load world geojson and add interactivity
   async function loadWorld(){
     try{
-      const res = await fetch('https://raw.githubusercontent.com/johan/world.geo.json/master/countries.geo.json');
-      const json = await res.json();
-      geojsonLayer = L.geoJson(json, {
-        style: ()=>({ color:'#0d8891', weight:1, fillOpacity:0.12 }),
-        onEachFeature: (feature, layer) => {
-          const name = feature.properties.name;
+      const res=await fetch('https://raw.githubusercontent.com/johan/world.geo.json/master/countries.geo.json');
+      const json=await res.json();
+      geojsonLayer=L.geoJson(json,{
+        style:()=>({ color:'#0d8891', weight:1, fillOpacity:0.12 }),
+        onEachFeature:(feature,layer)=>{
+          const name=feature.properties.name;
           layer.on({
-            mouseover: e => { e.target.setStyle({fillOpacity:0.5, color:'#facc15'}); },
-            mouseout: e => { geojsonLayer.resetStyle(e.target); },
-            click: async e => {
-              showLoading(true);
-              clearAttractionMarkers();
-              try {
-                map.fitBounds(layer.getBounds(), {padding:[18,18]});
-                // fetch country info + weather + attractions
-                const info = await getCountryInfoSafe(name);
-                if(!info) {
-                  showLoading(false);
-                  alert('No country info');
-                  return;
-                }
+            mouseover:e=>{ e.target.setStyle({fillOpacity:0.5,color:'#facc15'}); },
+            mouseout:e=>{ geojsonLayer.resetStyle(e.target); },
+            click:async e=>{
+              showLoading(true); clearAttractionMarkers();
+              try{
+                map.fitBounds(layer.getBounds(),{padding:[18,18]});
+                const info=await getCountryInfoSafe(name);
                 updateSidebarInfo(info);
-                const weather = await getWeatherSafe(info.latlng && info.latlng[0], info.latlng && info.latlng[1]);
+                const weather=await getWeatherSafe(info.latlng && info.latlng[0], info.latlng && info.latlng[1]);
                 updateWeather(weather);
-                const attractions = await getAttractionsSafe(name);
-                // add markers + list
-                if(attractions && attractions.attractions){
-                  attractions.attractions.forEach(a=>{
-                    addAttractionMarker(a, name);
-                  });
-                  renderAttractionList(attractions.attractions, name);
-                } else {
-                  renderAttractionList([], name);
-                }
-              } catch(err){
-                console.error(err);
-                alert('Error loading country data');
-              } finally { showLoading(false); }
+                const attractions=await getAttractionsSafe(name);
+                if(attractions && attractions.attractions){ attractions.attractions.forEach(a=>addAttractionMarker(a)); renderAttractionList(attractions.attractions); }
+              }catch(err){ console.error(err); alert('Error loading country data'); }
+              finally{ showLoading(false); }
             }
           });
         }
       }).addTo(map);
-    }catch(err){
-      console.error('GeoJSON load failed', err);
-    }
+    }catch(err){ console.error('GeoJSON load failed',err); }
   }
 
-  // safe wrappers (return null on error)
-  async function getCountryInfoSafe(name){ try{ return await getCountryInfo(name); } catch(e){ console.error(e); return null; } }
-  async function getWeatherSafe(lat,lng){ try{ if(!lat||!lng) return null; return await getWeather(lat,lng); } catch(e){ console.error(e); return null; } }
-  async function getAttractionsSafe(country){ try{ return await getAttractions(country); } catch(e){ console.error(e); return null; } }
+  async function getCountryInfoSafe(name){ try{return await getCountryInfo(name);}catch(e){console.error(e);return null;} }
+  async function getWeatherSafe(lat,lng){ try{ if(!lat||!lng) return null; return await getWeather(lat,lng); }catch(e){console.error(e);return null;} }
+  async function getAttractionsSafe(country){ try{ return await getAttractions(country); }catch(e){console.error(e);return {attractions:[]};} }
 
-  // update sidebar
   function updateSidebarInfo(info){
-    countryNameEl.textContent = info.name || '—';
-    if(info.flag){ flagImg.src = info.flag; flagImg.style.display='block'; } else { flagImg.style.display='none'; }
-    capEl.textContent = `Capital — ${info.capital || 'N/A'}`;
-    regEl.textContent = `Region — ${info.region || 'N/A'}`;
-    popEl.textContent = `Population — ${info.population ? Number(info.population).toLocaleString() : 'N/A'}`;
-    curEl.textContent = `Currency — ${info.currency || 'N/A'}`;
+    countryNameEl.textContent = info?.name||'—';
+    if(info?.flag){ flagImg.src=info.flag; flagImg.style.display='block'; } else { flagImg.style.display='none'; }
+    capEl.textContent=`Capital — ${info?.capital||'N/A'}`;
+    regEl.textContent=`Region — ${info?.region||'N/A'}`;
+    popEl.textContent=`Population — ${info?.population ? Number(info.population).toLocaleString() : 'N/A'}`;
+    curEl.textContent=`Currency — ${info?.currency||'N/A'}`;
   }
-  function updateWeather(w){
-    if(!w || !w.weather){ weatherText.textContent = '—'; return; }
-    const t = w.weather.temperature ?? 'N/A';
-    const ws = w.weather.windspeed ?? '—';
-    weatherText.textContent = `${t}°C • ${ws} m/s`;
-  }
+  function updateWeather(w){ weatherText.textContent = w?.weather ? `${w.weather.temperature ?? 'N/A'}°C • ${w.weather.windspeed ?? '—'} m/s` : '—'; }
 
-  // refresh attractions button reloads currently visible country
-  refreshBtn.addEventListener('click',()=>{
-    const cname = countryNameEl.textContent;
-    if(cname && cname !== 'Click a country') {
-      // simulate click by finding feature with that name
-      geojsonLayer.eachLayer(layer=>{
-        if(layer.feature && layer.feature.properties && layer.feature.properties.name === cname){
-          layer.fire('click');
-        }
-      });
-    }
-  });
+  refreshBtn.addEventListener('click',()=>{ const cname=countryNameEl.textContent; if(cname && cname!=='Click a country'){ geojsonLayer.eachLayer(l=>{ if(l.feature?.properties?.name===cname) l.fire('click'); }); } });
 
-  // Start
   loadWorld();
-
 })();
 </script>
 </body>
