@@ -111,6 +111,9 @@ html,body{height:100%;margin:0;font-family:Inter,system-ui,-apple-system,"Segoe 
   const BASE_URL = "https://sesd-project-7gqa.onrender.com";
   const token = localStorage.getItem("access_token");
 
+  // Debug: log access token
+  console.log("✅ Access Token:", token);
+
   const map = L.map('map', { minZoom:2, worldCopyJump:true }).setView([20,0],2);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap contributors' }).addTo(map);
 
@@ -139,14 +142,14 @@ html,body{height:100%;margin:0;font-family:Inter,system-ui,-apple-system,"Segoe 
   async function getAttractions(country){ const res = await fetch(`${BASE_URL}/attractions/${encodeURIComponent(country)}`); if(!res.ok) return {attractions:[]}; return await res.json(); }
 
   async function favoriteAttraction(attractionId){
-    if(!token) { alert('Login required'); return; }
+    if(!token){ alert('Login required'); return; }
     showLoading(true);
     try {
       const res = await fetch(`${BASE_URL}/favorites/${attractionId}`, {
         method:'POST',
         headers:{ 'Authorization': `Bearer ${token}` },
       });
-      if(!res.ok) { const data = await res.json().catch(()=>({})); throw new Error(data.detail || 'Failed to favorite'); }
+      if(!res.ok){ const data = await res.json().catch(()=>({})); throw new Error(data.detail || 'Failed to favorite'); }
       alert('Added to favorites!');
     } catch(err){ console.error(err); alert('Error: '+err.message); }
     finally{ showLoading(false); }
@@ -185,9 +188,7 @@ html,body{height:100%;margin:0;font-family:Inter,system-ui,-apple-system,"Segoe 
       body.appendChild(title); body.appendChild(desc); body.appendChild(gallery); body.appendChild(favBtn); body.appendChild(wikiBtn);
       item.appendChild(thumb); item.appendChild(body);
       item.addEventListener('mouseenter',()=>gallery.style.display='flex'); item.addEventListener('mouseleave',()=>gallery.style.display='none');
-      item.addEventListener('click',()=>{
-        if(attr.lat&&attr.lng){ map.setView([attr.lat,attr.lng],Math.max(8,map.getZoom())); const mk=attractionMarkers.find(m=>Math.abs(m.getLatLng().lat-attr.lat)<0.0001&&Math.abs(m.getLatLng().lng-attr.lng)<0.0001); if(mk) mk.openPopup(); }
-      });
+      item.addEventListener('click',()=>{ if(attr.lat&&attr.lng){ map.setView([attr.lat,attr.lng],Math.max(8,map.getZoom())); const mk=attractionMarkers.find(m=>Math.abs(m.getLatLng().lat-attr.lat)<0.0001&&Math.abs(m.getLatLng().lng-attr.lng)<0.0001); if(mk) mk.openPopup(); } });
       attractionList.appendChild(item);
     });
     document.querySelectorAll('.gallery').forEach(g=>g.style.display='none');
