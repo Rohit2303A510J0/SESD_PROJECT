@@ -1,14 +1,20 @@
-from fastapi import APIRouter, HTTPException, Depends
-from app.database import get_db_connection
-from app.auth import get_current_user
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import List
+from app.database import get_db_connection
+from app.auth import get_current_user  # Using /auth/me logic internally
 
 router = APIRouter(prefix="/favorites", tags=["Favorites"])
 
 
+# --------- MODELS ----------
 class FavoriteRequest(BaseModel):
     attraction_id: int
+    access_token: str  # ✅ add this here so you can send token with body
+
+
+class TokenInput(BaseModel):
+    access_token: str
 
 
 class FavoriteResponse(BaseModel):
@@ -22,13 +28,19 @@ class FavoriteResponse(BaseModel):
 
 # -------- ADD TO FAVORITES --------
 @router.post("/", status_code=201)
-def add_favorite(req: FavoriteRequest, current_user: dict = Depends(get_current_user)):
-    user_id = current_user["user_id"]
+def add_favorite(req: FavoriteRequest):
+    """
+    Add attraction to favorites using access_token in body.
+    """
+    # ✅ Get user info from token
+    user = get_current_user(TokenInput(access_token=req.access_token))
+    user_id = user["user_id"]
+
     conn = get_db_connection()
     cur = conn.cursor()
 
     try:
-        # Check if already favorited
+        # Prevent duplicate favorites
         cur.execute("SELECT id FROM favorites WHERE user_id = %s AND attraction_id = %s;", (user_id, req.attraction_id))
         if cur.fetchone():
             raise HTTPException(status_code=400, detail="Already added to favorites")
@@ -44,9 +56,14 @@ def add_favorite(req: FavoriteRequest, current_user: dict = Depends(get_current_
 
 
 # -------- GET ALL FAVORITES --------
-@router.get("/", response_model=List[FavoriteResponse])
-def get_favorites(current_user: dict = Depends(get_current_user)):
-    user_id = current_user["user_id"]
+@router.post("/list", response_model=List[FavoriteResponse])
+def get_favorites(token_input: TokenInput):
+    """
+    Get all favorite attractions for current user using access_token in body.
+    """
+    user = get_current_user(token_input)
+    user_id = user["user_id"]
+
     conn = get_db_connection()
     cur = conn.cursor()
 
@@ -79,14 +96,24 @@ def get_favorites(current_user: dict = Depends(get_current_user)):
 
 
 # -------- DELETE FAVORITE --------
-@router.delete("/{attraction_id}")
-def delete_favorite(attraction_id: int, current_user: dict = Depends(get_current_user)):
-    user_id = current_user["user_id"]
+class DeleteFavoriteRequest(BaseModel):
+    attraction_id: int
+    access_token: str
+
+
+@router.post("/delete")
+def delete_favorite(req: DeleteFavoriteRequest):
+    """
+    Delete a favorite attraction using access_token in body.
+    """
+    user = get_current_user(TokenInput(access_token=req.access_token))
+    user_id = user["user_id"]
+
     conn = get_db_connection()
     cur = conn.cursor()
 
     try:
-        cur.execute("DELETE FROM favorites WHERE user_id = %s AND attraction_id = %s;", (user_id, attraction_id))
+        cur.execute("DELETE FROM favorites WHERE user_id = %s AND attraction_id = %s;", (user_id, req.attraction_id))
         if cur.rowcount == 0:
             raise HTTPException(status_code=404, detail="Favorite not found")
         conn.commit()

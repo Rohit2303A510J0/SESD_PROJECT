@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, status, Depends, Header
+from fastapi import APIRouter, HTTPException, status
 from datetime import datetime, timedelta
 from app.database import get_db_connection
 from pydantic import BaseModel
@@ -8,7 +8,7 @@ import os
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
-JWT_SECRET = os.getenv("JWT_SECRET", "secret123")
+JWT_SECRET = os.getenv("JWT_SECRET", "secret123")  # fallback for local
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_HOURS = 6
 
@@ -26,6 +26,7 @@ def register_user(email: str, password: str):
         raise HTTPException(status_code=400, detail="Email already registered")
 
     hashed_pw = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+
     cur.execute("INSERT INTO users (email, password_hash) VALUES (%s, %s);", (email, hashed_pw))
     conn.commit()
     cur.close()
@@ -49,9 +50,11 @@ def login_user(email: str, password: str):
         raise HTTPException(status_code=400, detail="Invalid email or password")
 
     user_id, password_hash = user
+
     if not bcrypt.checkpw(password.encode("utf-8"), password_hash.encode("utf-8")):
         raise HTTPException(status_code=400, detail="Invalid email or password")
 
+    # Generate JWT token
     expire = datetime.utcnow() + timedelta(hours=ACCESS_TOKEN_EXPIRE_HOURS)
     payload = {"user_id": user_id, "exp": expire.timestamp()}
     token = jwt.encode(payload, JWT_SECRET, algorithm=ALGORITHM)
@@ -63,20 +66,22 @@ def login_user(email: str, password: str):
     }
 
 
-# -------- GET CURRENT USER (Reusable Dependency) --------
-def get_current_user(authorization: str = Header(None)):
-    if not authorization:
-        raise HTTPException(status_code=401, detail="Authorization header missing")
+# -------- TOKEN INPUT MODEL --------
+class TokenInput(BaseModel):
+    access_token: str
+
+
+# -------- GET CURRENT USER --------
+@router.post("/me")
+def get_current_user(token_input: TokenInput):
+    """
+    Get current user info from access token.
+    Paste your JWT token string in Swagger UI and click Execute.
+    """
+    jwt_token = token_input.access_token.strip()
 
     try:
-        scheme, token = authorization.split()
-        if scheme.lower() != "bearer":
-            raise HTTPException(status_code=401, detail="Invalid auth scheme")
-    except ValueError:
-        raise HTTPException(status_code=401, detail="Invalid Authorization header format")
-
-    try:
-        payload = jwt.decode(token, JWT_SECRET, algorithms=[ALGORITHM])
+        payload = jwt.decode(jwt_token, JWT_SECRET, algorithms=[ALGORITHM])
         user_id = payload.get("user_id")
         if not user_id:
             raise HTTPException(status_code=401, detail="Invalid token payload")
