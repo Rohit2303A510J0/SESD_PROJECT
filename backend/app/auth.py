@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends
 from fastapi.security import OAuth2PasswordBearer
+from fastapi import Header
 from datetime import datetime, timedelta
 from app.database import get_db_connection
 import bcrypt
@@ -63,7 +64,17 @@ def login_user(email: str, password: str):
 
 # -------- GET CURRENT USER --------
 @router.get("/me")
-def get_current_user(token: str = Depends(oauth2_scheme)):
+def get_current_user(authorization: str = Header(None)):
+    """
+    Returns current user info from Bearer token.
+    Example header:
+    Authorization: Bearer <token>
+    """
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
+
+    token = authorization.split(" ")[1]
+
     try:
         payload = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
         return {"user_id": payload["user_id"]}
