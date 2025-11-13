@@ -28,6 +28,23 @@ def create_tables():
     );
     """)
 
+    # Attractions table
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS attractions (
+        id SERIAL PRIMARY KEY,
+        country VARCHAR(100) NOT NULL,
+        name VARCHAR(200) NOT NULL,
+        lat FLOAT NOT NULL,
+        lng FLOAT NOT NULL,
+        description TEXT,
+        image1 TEXT,
+        image2 TEXT,
+        image3 TEXT,
+        image4 TEXT,
+        status VARCHAR(50) DEFAULT 'available'
+    );
+    """)
+
     conn.commit()
     cur.close()
     conn.close()
