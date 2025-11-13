@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Optional
 from app.database import get_db_connection
@@ -9,6 +9,7 @@ router = APIRouter(prefix="/attractions", tags=["Attractions"])
 
 UNSPLASH_ACCESS_KEY = os.getenv("UNSPLASH_ACCESS_KEY")
 UNSPLASH_URL = "https://api.unsplash.com/search/photos"
+
 
 # ---------------- Pydantic models ----------------
 class AttractionCreate(BaseModel):
@@ -22,6 +23,7 @@ class AttractionCreate(BaseModel):
     image3: Optional[str] = None
     image4: Optional[str] = None
     status: Optional[str] = "available"  # default
+
 
 # ---------------- Helper to fetch images ----------------
 def fetch_images_from_unsplash(query: str, per_page: int = 4):
@@ -39,7 +41,8 @@ def fetch_images_from_unsplash(query: str, per_page: int = 4):
     except Exception:
         return []
 
-# ---------------- Endpoints ----------------
+
+# ---------------- Add Attraction ----------------
 @router.post("/")
 def add_attraction(attraction: AttractionCreate):
     """
@@ -60,7 +63,7 @@ def add_attraction(attraction: AttractionCreate):
         images = [attraction.image1, attraction.image2, attraction.image3, attraction.image4]
         if not any(images):
             fetched_images = fetch_images_from_unsplash(attraction.name)
-            images = fetched_images + [None]*(4 - len(fetched_images))  # pad to 4
+            images = fetched_images + [None] * (4 - len(fetched_images))  # pad to 4
 
         cur.execute("""
             INSERT INTO attractions (country, name, lat, lng, description, image1, image2, image3, image4, status)
@@ -82,6 +85,7 @@ def add_attraction(attraction: AttractionCreate):
         conn.close()
 
 
+# ---------------- Get Attractions by Country ----------------
 @router.get("/{country_name}")
 def get_attractions(country_name: str):
     """
@@ -92,7 +96,11 @@ def get_attractions(country_name: str):
     cur = conn.cursor()
 
     try:
-        cur.execute("SELECT name, lat, lng, description, image1, image2, image3, image4, status FROM attractions WHERE country=%s;", (country_name,))
+        cur.execute("""
+            SELECT id, name, lat, lng, description, image1, image2, image3, image4, status
+            FROM attractions
+            WHERE country=%s;
+        """, (country_name,))
         rows = cur.fetchall()
 
         if not rows:
@@ -101,12 +109,13 @@ def get_attractions(country_name: str):
         attractions = []
         for r in rows:
             attractions.append({
-                "name": r[0],
-                "lat": r[1],
-                "lng": r[2],
-                "description": r[3],
-                "images": [img for img in r[4:8] if img],  # only non-empty images
-                "status": r[8]
+                "id": r[0],  # ✅ attraction_id added here
+                "name": r[1],
+                "lat": r[2],
+                "lng": r[3],
+                "description": r[4],
+                "images": [img for img in r[5:9] if img],
+                "status": r[9]
             })
 
         return {"country": country_name, "attractions": attractions}
@@ -131,9 +140,10 @@ def delete_attraction(attraction_id: int):
         if not cur.fetchone():
             raise HTTPException(status_code=404, detail="Attraction not found")
 
-        cur.execute("DELETE FROM attractions WHERE id=%s;", (attraction_id,))
+        cur.execute("DELETE FROM attractions WHERE id=%s RETURNING id;", (attraction_id,))
+        deleted = cur.fetchone()
         conn.commit()
-        return {"message": f"Attraction {attraction_id} deleted successfully"}
+        return {"message": f"Attraction {deleted[0]} deleted successfully", "id": deleted[0]}
     except Exception as e:
         conn.rollback()
         raise HTTPException(status_code=500, detail=f"Error deleting attraction: {str(e)}")
