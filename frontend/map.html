@@ -1,33 +1,51 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Interactive Map | Travel Snapshot</title>
-  <link
-    rel="stylesheet"
-    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-  />
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <link rel="stylesheet" href="map.css" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Backend Test Page</title>
+  <link rel="stylesheet" href="map.css">
 </head>
-
 <body>
-  <nav class="navbar">
-    <div class="logo">🌍 Travel Snapshot</div>
-    <div class="nav-links">
-      <a href="favorites.html">Favorites</a>
-      <a href="#" id="logoutBtn">Logout</a>
-    </div>
-  </nav>
+  <h2>🌍 Backend Testing Interface</h2>
+  <p>This page tests all API endpoints (Render backend) from GitHub frontend.</p>
 
-  <div id="map"></div>
+  <div class="section">
+    <h3>🔑 Authentication</h3>
+    <input type="email" id="email" placeholder="Email" />
+    <input type="password" id="password" placeholder="Password" />
+    <button id="loginBtn">Login</button>
+    <button id="registerBtn">Register</button>
+    <button id="logoutBtn">Logout</button>
+    <p id="authStatus"></p>
+  </div>
 
-  <div class="info-panel" id="infoPanel">
-    <h3 id="countryName">Hover over a country</h3>
-    <p id="countryDetails"></p>
-    <div id="weatherInfo"></div>
-    <div id="attractionList"></div>
+  <div class="section">
+    <h3>📍 Location</h3>
+    <input type="text" id="countryInput" placeholder="Enter country name" />
+    <button id="getLocationBtn">Get Location</button>
+    <pre id="locationOutput"></pre>
+  </div>
+
+  <div class="section">
+    <h3>☁️ Weather</h3>
+    <button id="getWeatherBtn">Get Weather</button>
+    <pre id="weatherOutput"></pre>
+  </div>
+
+  <div class="section">
+    <h3>🏛 Attractions</h3>
+    <button id="getAttractionsBtn">Get Attractions</button>
+    <pre id="attractionsOutput"></pre>
+  </div>
+
+  <div class="section">
+    <h3>❤️ Favorites</h3>
+    <button id="getFavoritesBtn">Get Favorites</button>
+    <input type="number" id="favAttractionId" placeholder="Attraction ID" />
+    <button id="addFavoriteBtn">Add Favorite</button>
+    <button id="deleteFavoriteBtn">Delete Favorite</button>
+    <pre id="favoritesOutput"></pre>
   </div>
 
   <script src="map.js"></script>

@@ -1,70 +1,47 @@
 body {
-  margin: 0;
-  font-family: "Poppins", sans-serif;
-  background-color: #121212;
-  color: #eaeaea;
-  overflow: hidden;
+  font-family: Arial, sans-serif;
+  background: #121212;
+  color: #f2f2f2;
+  padding: 20px;
 }
 
-.navbar {
-  background-color: #1e1e1e;
-  color: #eaeaea;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 20px;
-  z-index: 1000;
-}
-
-.navbar .logo {
-  font-size: 1.2rem;
-  font-weight: 600;
-}
-
-.navbar .nav-links a {
-  color: #eaeaea;
-  text-decoration: none;
-  margin-left: 16px;
-  transition: color 0.2s;
-}
-
-.navbar .nav-links a:hover {
+h2, h3 {
   color: #00bfa6;
 }
 
-#map {
-  height: calc(100vh - 60px);
-  width: 75%;
-  float: left;
+.section {
+  border: 1px solid #333;
+  padding: 15px;
+  margin-bottom: 20px;
+  border-radius: 6px;
+  background: #1e1e1e;
 }
 
-.info-panel {
-  width: 25%;
-  height: calc(100vh - 60px);
-  background-color: #1e1e1e;
-  float: right;
-  padding: 16px;
-  overflow-y: auto;
-}
-
-.info-panel h3 {
-  color: #00bfa6;
-}
-
-.attraction-item {
-  border-bottom: 1px solid #333;
-  padding: 8px 0;
-}
-
-.favorite-btn {
-  background-color: #00bfa6;
-  border: none;
-  color: #121212;
+input, button {
+  margin: 5px 0;
+  padding: 8px;
   border-radius: 4px;
-  padding: 5px 10px;
-  cursor: pointer;
-  margin-top: 5px;
+  border: none;
 }
-.favorite-btn:hover {
+
+input {
+  width: 200px;
+}
+
+button {
+  background-color: #00bfa6;
+  color: #121212;
+  cursor: pointer;
+  margin-left: 5px;
+}
+
+button:hover {
   background-color: #00d4b4;
+}
+
+pre {
+  background: #222;
+  padding: 10px;
+  border-radius: 5px;
+  overflow-x: auto;
 }
