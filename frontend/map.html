@@ -141,19 +141,36 @@ html,body{height:100%;margin:0;font-family:Inter,system-ui,-apple-system,"Segoe 
   async function getWeather(lat,lng){ if(!lat||!lng) return null; const res = await fetch(`${BASE_URL}/weather?lat=${lat}&lng=${lng}`); if(!res.ok) return null; return await res.json(); }
   async function getAttractions(country){ const res = await fetch(`${BASE_URL}/attractions/${encodeURIComponent(country)}`); if(!res.ok) return {attractions:[]}; return await res.json(); }
 
-  async function favoriteAttraction(attractionId){
-    if(!token){ alert('Login required'); return; }
+  async function favoriteAttraction(attractionId) {
+    const token = localStorage.getItem("access_token"); // get fresh token each click
+    console.log("🔹 Attraction ID:", attractionId);
+    console.log("🔹 Access Token:", token);
+
+    if (!token) {
+        alert('Login required');
+        return;
+    }
+
     showLoading(true);
     try {
-      const res = await fetch(`${BASE_URL}/favorites/${attractionId}`, {
-        method:'POST',
-        headers:{ 'Authorization': `Bearer ${token}` },
-      });
-      if(!res.ok){ const data = await res.json().catch(()=>({})); throw new Error(data.detail || 'Failed to favorite'); }
-      alert('Added to favorites!');
-    } catch(err){ console.error(err); alert('Error: '+err.message); }
-    finally{ showLoading(false); }
-  }
+        const res = await fetch(`${BASE_URL}/favorites/${attractionId}`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` },
+        });
+        console.log("✅ Response status:", res.status);
+        const data = await res.json().catch(() => ({}));
+        console.log("✅ Response data:", data);
+
+        if (!res.ok) throw new Error(data.detail || 'Failed to favorite');
+        alert('Added to favorites!');
+    } catch (err) {
+        console.error("❌ Error favoriting:", err);
+        alert('Error: ' + err.message);
+    } finally {
+        showLoading(false);
+    }
+}
+
 
   function addAttractionMarker(attr){
     if(!attr || !attr.lat || !attr.lng) return;
