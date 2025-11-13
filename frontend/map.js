@@ -1,96 +1,155 @@
 const BASE_URL = "https://sesd-project-7gqa.onrender.com";
 const token = localStorage.getItem("access_token");
 
-// Redirect if not logged in
 if (!token) {
   alert("Please log in first!");
   window.location.href = "login.html";
 }
 
-// Initialize map
-const map = L.map("map").setView([20.5937, 78.9629], 5); // India default
+const map = L.map("map", {
+  worldCopyJump: true,
+  minZoom: 2,
+}).setView([20, 0], 2);
 
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-  attribution: "&copy; OpenStreetMap contributors",
+  attribution: "© OpenStreetMap contributors",
 }).addTo(map);
 
-const searchBtn = document.getElementById("searchBtn");
-const searchInput = document.getElementById("searchInput");
-const locationName = document.getElementById("locationName");
-const weatherInfo = document.getElementById("weatherInfo");
-const attractionList = document.getElementById("attractionList");
-const logoutBtn = document.getElementById("logoutBtn");
+let geojsonLayer;
+let activeCountry = null;
 
-// Search location
-searchBtn.addEventListener("click", async () => {
-  const query = searchInput.value.trim();
-  if (!query) return alert("Enter a location to search.");
+// Load GeoJSON world map
+async function loadGeoJSON() {
+  const res = await fetch("https://raw.githubusercontent.com/johan/world.geo.json/master/countries.geo.json");
+  const data = await res.json();
 
-  try {
-    // 1️⃣ Get location coordinates
-    const locRes = await fetch(`${BASE_URL}/location/?query=${encodeURIComponent(query)}`);
-    const locData = await locRes.json();
+  geojsonLayer = L.geoJson(data, {
+    style: {
+      color: "#00bfa6",
+      weight: 1,
+      fillOpacity: 0.1,
+    },
+    onEachFeature: onEachCountry,
+  }).addTo(map);
+}
 
-    if (!locRes.ok) throw new Error(locData.detail || "Failed to fetch location");
+function onEachCountry(feature, layer) {
+  layer.on({
+    mouseover: (e) => highlightCountry(e, feature),
+    mouseout: resetHighlight,
+    click: (e) => zoomToCountry(e, feature),
+  });
+}
 
-    const { latitude, longitude, display_name } = locData;
-    map.setView([latitude, longitude], 10);
+function highlightCountry(e, feature) {
+  const layer = e.target;
+  layer.setStyle({
+    weight: 2,
+    color: "#00d4b4",
+    fillOpacity: 0.3,
+  });
 
-    L.marker([latitude, longitude]).addTo(map).bindPopup(display_name).openPopup();
-    locationName.textContent = display_name;
+  const name = feature.properties.name || "Unknown";
+  document.getElementById("countryName").textContent = name;
+  document.getElementById("countryDetails").innerHTML = `Loading info...`;
 
-    // 2️⃣ Get weather
-    const weatherRes = await fetch(`${BASE_URL}/weather?lat=${latitude}&lon=${longitude}`);
-    const weatherData = await weatherRes.json();
+  fetch(`https://restcountries.com/v3.1/name/${encodeURIComponent(name)}?fullText=true`)
+    .then((r) => r.json())
+    .then((info) => {
+      if (info && info[0]) {
+        const c = info[0];
+        document.getElementById(
+          "countryDetails"
+        ).innerHTML = `<b>Capital:</b> ${c.capital?.[0] || "N/A"}<br>
+                       <b>Region:</b> ${c.region}<br>
+                       <b>Population:</b> ${c.population.toLocaleString()}`;
+      }
+    })
+    .catch(() => {
+      document.getElementById("countryDetails").innerText = "Info not available";
+    });
+}
 
-    weatherInfo.textContent = `🌡️ ${weatherData.temperature}°C, ${weatherData.description}`;
+function resetHighlight(e) {
+  geojsonLayer.resetStyle(e.target);
+}
 
-    // 3️⃣ Get attractions
-    const attrRes = await fetch(`${BASE_URL}/attractions?lat=${latitude}&lon=${longitude}`);
-    const attractions = await attrRes.json();
+async function zoomToCountry(e, feature) {
+  if (activeCountry) geojsonLayer.resetStyle(activeCountry);
+  activeCountry = e.target;
 
-    attractionList.innerHTML = "";
+  map.fitBounds(activeCountry.getBounds());
+
+  const countryName = feature.properties.name;
+  document.getElementById("countryName").textContent = countryName;
+
+  // Get lat/lon for weather & attractions
+  const locRes = await fetch(`${BASE_URL}/location/?query=${encodeURIComponent(countryName)}`);
+  const locData = await locRes.json();
+
+  if (!locRes.ok || !locData.latitude || !locData.longitude) {
+    document.getElementById("weatherInfo").innerHTML = "⚠️ Unable to fetch location data.";
+    return;
+  }
+
+  const { latitude, longitude } = locData;
+
+  // Weather
+  const weatherRes = await fetch(`${BASE_URL}/weather?lat=${latitude}&lon=${longitude}`);
+  const weatherData = await weatherRes.json();
+  document.getElementById("weatherInfo").innerHTML = `
+    <p>🌡️ ${weatherData.temperature}°C, ${weatherData.description}</p>
+  `;
+
+  // Attractions
+  const attrRes = await fetch(`${BASE_URL}/attractions?lat=${latitude}&lon=${longitude}`);
+  const attractions = await attrRes.json();
+
+  const attractionList = document.getElementById("attractionList");
+  attractionList.innerHTML = "<h4>Attractions:</h4>";
+
+  if (attractions.length === 0) {
+    attractionList.innerHTML += "<p>No attractions found.</p>";
+  } else {
     attractions.forEach((a) => {
       const div = document.createElement("div");
       div.classList.add("attraction-item");
       div.innerHTML = `
-        <h4>${a.name}</h4>
-        <p>${a.country}</p>
+        <b>${a.name}</b><br>${a.country}<br>
         <button class="favorite-btn" data-id="${a.id}">❤️ Add to Favorites</button>
       `;
       attractionList.appendChild(div);
     });
-
-    // Handle favorite button clicks
-    document.querySelectorAll(".favorite-btn").forEach((btn) => {
-      btn.addEventListener("click", async () => {
-        const attractionId = btn.getAttribute("data-id");
-
-        try {
-          const res = await fetch(`${BASE_URL}/favorites/`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ attraction_id: parseInt(attractionId) }),
-          });
-
-          const data = await res.json();
-          if (!res.ok) throw new Error(data.detail || "Failed to add favorite");
-
-          alert("✅ Added to favorites!");
-        } catch (err) {
-          alert("❌ " + err.message);
-        }
-      });
-    });
-  } catch (err) {
-    alert("❌ " + err.message);
   }
-});
+
+  // Handle favorites
+  document.querySelectorAll(".favorite-btn").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const attractionId = btn.getAttribute("data-id");
+      try {
+        const res = await fetch(`${BASE_URL}/favorites/`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ attraction_id: parseInt(attractionId) }),
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || "Failed to add favorite");
+        alert("✅ Added to favorites!");
+      } catch (err) {
+        alert("❌ " + err.message);
+      }
+    });
+  });
+}
 
 // Logout
-logoutBtn.addEventListener("click", () => {
+document.getElementById("logoutBtn").addEventListener("click", () => {
   localStorage.removeItem("access_token");
   window.location.href = "login.html";
 });
+
+loadGeoJSON();
