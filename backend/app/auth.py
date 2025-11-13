@@ -13,45 +13,58 @@ ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_HOURS = 6
 
 
-# -------- REGISTER --------
+# ---------- MODELS ----------
+class RegisterRequest(BaseModel):
+    email: str
+    password: str
+
+
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+
+
+class TokenInput(BaseModel):
+    access_token: str
+
+
+# ---------- REGISTER ----------
 @router.post("/register", status_code=status.HTTP_201_CREATED)
-def register_user(email: str, password: str):
+def register_user(user: RegisterRequest):
     conn = get_db_connection()
     cur = conn.cursor()
 
-    cur.execute("SELECT * FROM users WHERE email = %s;", (email,))
+    cur.execute("SELECT * FROM users WHERE email = %s;", (user.email,))
     if cur.fetchone():
         cur.close()
         conn.close()
         raise HTTPException(status_code=400, detail="Email already registered")
 
-    hashed_pw = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
-
-    cur.execute("INSERT INTO users (email, password_hash) VALUES (%s, %s);", (email, hashed_pw))
+    hashed_pw = bcrypt.hashpw(user.password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+    cur.execute("INSERT INTO users (email, password_hash) VALUES (%s, %s);", (user.email, hashed_pw))
     conn.commit()
+
     cur.close()
     conn.close()
+    return {"message": "User registered successfully ✅"}
 
-    return {"message": "User registered successfully"}
 
-
-# -------- LOGIN --------
+# ---------- LOGIN ----------
 @router.post("/login")
-def login_user(email: str, password: str):
+def login_user(user: LoginRequest):
     conn = get_db_connection()
     cur = conn.cursor()
 
-    cur.execute("SELECT id, password_hash FROM users WHERE email = %s;", (email,))
-    user = cur.fetchone()
+    cur.execute("SELECT id, password_hash FROM users WHERE email = %s;", (user.email,))
+    user_data = cur.fetchone()
     cur.close()
     conn.close()
 
-    if not user:
+    if not user_data:
         raise HTTPException(status_code=400, detail="Invalid email or password")
 
-    user_id, password_hash = user
-
-    if not bcrypt.checkpw(password.encode("utf-8"), password_hash.encode("utf-8")):
+    user_id, password_hash = user_data
+    if not bcrypt.checkpw(user.password.encode("utf-8"), password_hash.encode("utf-8")):
         raise HTTPException(status_code=400, detail="Invalid email or password")
 
     # Generate JWT token
@@ -62,21 +75,16 @@ def login_user(email: str, password: str):
     return {
         "access_token": token,
         "token_type": "bearer",
-        "expires_at": expire.isoformat()
+        "expires_at": expire.isoformat(),
     }
 
 
-# -------- TOKEN INPUT MODEL --------
-class TokenInput(BaseModel):
-    access_token: str
-
-
-# -------- GET CURRENT USER --------
+# ---------- GET CURRENT USER ----------
 @router.post("/me")
 def get_current_user(token_input: TokenInput):
     """
-    Get current user info from access token.
-    Paste your JWT token string in Swagger UI and click Execute.
+    Decode access token and return user info.
+    Used in Swagger or internal calls.
     """
     jwt_token = token_input.access_token.strip()
 

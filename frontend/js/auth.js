@@ -1,7 +1,7 @@
-// Base API URL
+// Base API URL — your Render backend
 const BASE_URL = "https://sesd-project-7gqa.onrender.com";
 
-// LOGIN
+// ---------- LOGIN ----------
 const loginForm = document.getElementById("loginForm");
 if (loginForm) {
   loginForm.addEventListener("submit", async (e) => {
@@ -16,22 +16,20 @@ if (loginForm) {
         body: JSON.stringify({ email, password }),
       });
 
-      if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData.detail || "Invalid credentials");
-      }
-
       const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || "Invalid credentials");
+
       localStorage.setItem("access_token", data.access_token);
-      alert("Login successful!");
+      alert("✅ Login successful!");
       window.location.href = "map.html";
     } catch (err) {
       alert("❌ " + err.message);
+      console.error("Login error:", err);
     }
   });
 }
 
-// REGISTER
+// ---------- REGISTER ----------
 const registerForm = document.getElementById("registerForm");
 if (registerForm) {
   registerForm.addEventListener("submit", async (e) => {
@@ -46,15 +44,14 @@ if (registerForm) {
         body: JSON.stringify({ email, password }),
       });
 
-      if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData.detail || "Failed to register user");
-      }
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || "Registration failed");
 
       alert("✅ Registration successful! You can now log in.");
       window.location.href = "login.html";
     } catch (err) {
       alert("❌ " + err.message);
+      console.error("Register error:", err);
     }
   });
 }
