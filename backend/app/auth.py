@@ -6,6 +6,9 @@ import bcrypt
 import jwt
 import os
 
+print("✅ Auth router loaded")
+
+
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
 JWT_SECRET = os.getenv("JWT_SECRET", "secret123")  # fallback for local
