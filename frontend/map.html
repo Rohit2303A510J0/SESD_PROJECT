@@ -1,11 +1,47 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Travel Snapshot | Map</title>
+  <link rel="stylesheet" href="map.css" />
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </head>
+
 <body>
-    map
+  <!-- NAVBAR -->
+  <nav class="navbar">
+    <div class="logo">🌍 Travel Snapshot</div>
+    <div class="nav-links">
+      <a href="favorites.html">Favorites</a>
+      <a href="#" id="logoutBtn">Logout</a>
+    </div>
+  </nav>
+
+  <!-- SEARCH BAR -->
+  <div class="search-container">
+    <input
+      type="text"
+      id="searchInput"
+      placeholder="Search for a location or attraction..."
+    />
+    <button id="searchBtn">Search</button>
+  </div>
+
+  <!-- MAIN CONTENT -->
+  <div class="map-container">
+    <div id="map"></div>
+    <div class="info-panel" id="infoPanel">
+      <h3 id="locationName">Select a location</h3>
+      <p id="weatherInfo"></p>
+      <div id="attractionList"></div>
+    </div>
+  </div>
+
+  <script src="map.js"></script>
 </body>
 </html>
