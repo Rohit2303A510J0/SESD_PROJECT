@@ -64,27 +64,19 @@ def login_user(email: str, password: str):
 
 
 # -------- GET CURRENT USER --------
-@router.get("/me")
-def get_current_user(
-    token: str = None, 
-    authorization: str = Header(default=None, alias="Authorization")
-):
-    """
-    Get current user info from Bearer token.
+from pydantic import BaseModel
 
-    Works in Swagger UI:
-    - Query param: /auth/me?token=<access_token>
-    - OR Header: Authorization: Bearer <access_token>
+# Pydantic model for input
+class TokenInput(BaseModel):
+    access_token: str
+
+@router.post("/me")
+def get_current_user(token_input: TokenInput):
     """
-    # Use token from query if provided, else try header
-    if token:
-        jwt_token = token.strip()
-    elif authorization:
-        if not authorization.startswith("Bearer "):
-            raise HTTPException(status_code=400, detail="Invalid authorization header format")
-        jwt_token = authorization.replace("Bearer ", "").strip()
-    else:
-        raise HTTPException(status_code=400, detail="Token missing (provide as query or header)")
+    Get current user info from access token.
+    Simply paste the token in Swagger UI and click Execute.
+    """
+    jwt_token = token_input.access_token.strip()
 
     try:
         payload = jwt.decode(jwt_token, JWT_SECRET, algorithms=[ALGORITHM])
