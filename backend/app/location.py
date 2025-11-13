@@ -8,19 +8,11 @@ RESTCOUNTRIES_URL = "https://restcountries.com/v3.1/name/"
 @router.get("/{country_name}")
 def get_country_info(country_name: str):
     """
-    Fetch country info from REST Countries API.
-    Returns:
-        {
-            "name": "India",
-            "capital": "New Delhi",
-            "flag": "https://restcountries.com/data/ind.svg",
-            "currency": "INR",
-            "languages": ["Hindi", "English"],
-            "latlng": [20.0, 77.0]
-        }
+    Fetch country info from REST Countries API (exact match).
     """
     try:
-        response = requests.get(f"{RESTCOUNTRIES_URL}{country_name}")
+        # ✅ Use fullText=true for exact match
+        response = requests.get(f"{RESTCOUNTRIES_URL}{country_name}?fullText=true")
         if response.status_code != 200:
             raise HTTPException(status_code=404, detail="Country not found")
 
@@ -29,14 +21,11 @@ def get_country_info(country_name: str):
         capital = data.get("capital", [None])[0]
         flag = data.get("flags", {}).get("svg")
         
-        # Get currency code (first currency)
         currencies = data.get("currencies", {})
         currency = list(currencies.keys())[0] if currencies else None
 
-        # Get languages
         languages = list(data.get("languages", {}).values()) if data.get("languages") else []
 
-        # Get lat/lng
         latlng = data.get("latlng", [None, None])
 
         return {
