@@ -4,7 +4,7 @@ import jwt, os
 
 router = APIRouter(prefix="/favorites", tags=["Favorites"])
 
-JWT_SECRET = os.getenv("JWT_SECRET", "secret123")
+JWT_SECRET = os.environ["JWT_SECRET"]
 ALGORITHM = "HS256"
 
 # ---------------- Auth helper ----------------

@@ -112,7 +112,7 @@ html,body{height:100%;margin:0;font-family:Inter,system-ui,-apple-system,"Segoe 
   const token = localStorage.getItem("access_token");
 
   // Debug: log access token
-  console.log("✅ Access Token:", token);
+//   console.log("✅ Access Token:", token);
 
   const map = L.map('map', { minZoom:2, worldCopyJump:true }).setView([20,0],2);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap contributors' }).addTo(map);
@@ -143,8 +143,8 @@ html,body{height:100%;margin:0;font-family:Inter,system-ui,-apple-system,"Segoe 
 
   async function favoriteAttraction(attractionId) {
     const token = localStorage.getItem("access_token");
-    console.log("🔹 Attraction ID:", attractionId);
-    console.log("🔹 Access Token:", token);
+    // console.log("🔹 Attraction ID:", attractionId);
+    // console.log("🔹 Access Token:", token);
 
     if (!token) {
         alert('Login required');
@@ -164,7 +164,7 @@ html,body{height:100%;margin:0;font-family:Inter,system-ui,-apple-system,"Segoe 
         });
 
         const data = await res.json().catch(() => ({}));
-        console.log("✅ Response data:", data);
+        // console.log("✅ Response data:", data);
 
         if (!res.ok) throw new Error(data.detail || 'Failed to favorite');
         alert('Added to favorites!');

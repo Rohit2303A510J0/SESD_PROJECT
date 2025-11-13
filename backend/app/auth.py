@@ -8,7 +8,7 @@ import os
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
-JWT_SECRET = os.getenv("JWT_SECRET", "secret123")  # fallback for local
+JWT_SECRET = os.environ["JWT_SECRET"] # fallback for local
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_HOURS = 6
 
