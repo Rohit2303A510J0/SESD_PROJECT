@@ -7,7 +7,7 @@ from app.images import router as images_router      # ✅ Images service
 from app.weather import router as weather_router    # ✅ Weather service
 from app.attractions import router as attractions_router  # ✅ Attractions service
 from app.favorites import router as favorites_router
-from database import get_db_connection
+from app.database import get_db_connection
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
