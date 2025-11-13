@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 from typing import Optional
 from app.database import get_db_connection
@@ -81,6 +81,7 @@ def add_attraction(attraction: AttractionCreate):
         cur.close()
         conn.close()
 
+
 @router.get("/{country_name}")
 def get_attractions(country_name: str):
     """
@@ -111,6 +112,31 @@ def get_attractions(country_name: str):
         return {"country": country_name, "attractions": attractions}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching attractions: {str(e)}")
+    finally:
+        cur.close()
+        conn.close()
+
+
+# ---------------- DELETE Attraction ----------------
+@router.delete("/{attraction_id}")
+def delete_attraction(attraction_id: int = Query(..., description="ID of the attraction to delete")):
+    """
+    Delete an attraction by its ID.
+    """
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    try:
+        cur.execute("SELECT id FROM attractions WHERE id=%s;", (attraction_id,))
+        if not cur.fetchone():
+            raise HTTPException(status_code=404, detail="Attraction not found")
+
+        cur.execute("DELETE FROM attractions WHERE id=%s;", (attraction_id,))
+        conn.commit()
+        return {"message": f"Attraction {attraction_id} deleted successfully"}
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=f"Error deleting attraction: {str(e)}")
     finally:
         cur.close()
         conn.close()
