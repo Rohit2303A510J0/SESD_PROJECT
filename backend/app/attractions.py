@@ -119,7 +119,7 @@ def get_attractions(country_name: str):
 
 # ---------------- DELETE Attraction ----------------
 @router.delete("/{attraction_id}")
-def delete_attraction(attraction_id: int = Query(..., description="ID of the attraction to delete")):
+def delete_attraction(attraction_id: int):
     """
     Delete an attraction by its ID.
     """
