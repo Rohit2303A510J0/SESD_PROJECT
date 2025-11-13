@@ -3,24 +3,57 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Interactive World Map</title>
+  <title>World Explorer Map</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <style>
-    html, body {
-      height: 100%;
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
       margin: 0;
-      overflow: hidden;
       font-family: "Poppins", sans-serif;
       background-color: #0f172a;
       color: #f1f5f9;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* 🌐 Navbar */
+    nav {
+      background: #1e293b;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 20px;
+      border-bottom: 1px solid #334155;
+      z-index: 1000;
+    }
+
+    nav h1 {
+      color: #38bdf8;
+      font-size: 20px;
+      margin: 0;
+    }
+
+    .nav-links a {
+      color: #f1f5f9;
+      text-decoration: none;
+      margin-left: 20px;
+      font-weight: 500;
+      transition: color 0.2s;
+    }
+
+    .nav-links a:hover {
+      color: #38bdf8;
     }
 
     #map {
+      flex: 1;
       width: 100%;
-      height: 100vh;
-      margin: 0;
-      padding: 0;
     }
 
     .leaflet-popup-content-wrapper {
@@ -30,13 +63,15 @@
       border: 1px solid #38bdf8;
     }
 
-    .leaflet-popup-content {
-      font-size: 14px;
-      line-height: 1.5;
-    }
-
     .leaflet-popup-tip {
       background: #1e293b;
+    }
+
+    .flag {
+      width: 70px;
+      border-radius: 6px;
+      display: block;
+      margin-bottom: 5px;
     }
 
     .attr-btn {
@@ -49,118 +84,115 @@
       font-size: 13px;
       margin-top: 6px;
     }
-
-    .flag {
-      width: 60px;
-      border-radius: 6px;
-      display: block;
-      margin-bottom: 5px;
-    }
   </style>
 </head>
 <body>
+  <!-- 🧭 Navbar -->
+  <nav>
+    <h1>Travel Snapshot 🌍</h1>
+    <div class="nav-links">
+      <a href="index.html">Home</a>
+      <a href="map.html">Map</a>
+      <a href="favorites.html">Favorites</a>
+      <a href="#" id="logoutBtn">Logout</a>
+    </div>
+  </nav>
+
+  <!-- 🗺️ Map -->
   <div id="map"></div>
 
   <script>
-    const BASE_URL = "https://sesd-project-7gqa.onrender.com"; // backend on Render
-    const token = localStorage.getItem("access_token"); // stored from login
+    const BASE_URL = "https://sesd-project-7gqa.onrender.com";
+    const token = localStorage.getItem("access_token");
 
-    // Initialize map
+    // 🔐 Logout handler
+    document.getElementById("logoutBtn").addEventListener("click", () => {
+      localStorage.removeItem("access_token");
+      alert("Logged out successfully!");
+      window.location.href = "login.html";
+    });
+
+    // 🗺️ Initialize map
     const map = L.map("map", {
       minZoom: 2,
       maxBounds: [
         [-85, -180],
-        [85, 180]
+        [85, 180],
       ],
-      worldCopyJump: true
+      worldCopyJump: true,
     }).setView([20, 0], 2);
 
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      attribution: "© OpenStreetMap contributors"
+      attribution: "© OpenStreetMap contributors",
     }).addTo(map);
 
     let geojsonLayer;
     let attractionMarkers = [];
 
-    // Fetch country info
-    async function fetchCountryData(name) {
-      try {
-        const res = await fetch(`${BASE_URL}/location/${encodeURIComponent(name)}`);
-        if (!res.ok) throw new Error("Country info failed");
-        return await res.json();
-      } catch (err) {
-        console.error(err);
-        return null;
-      }
+    // 🎯 API Calls
+    async function fetchCountryInfo(name) {
+      const res = await fetch(`${BASE_URL}/location/${encodeURIComponent(name)}`);
+      if (!res.ok) throw new Error("Country fetch failed");
+      return await res.json();
     }
 
-    // Fetch weather
     async function fetchWeather(lat, lng) {
-      try {
-        const res = await fetch(`${BASE_URL}/weather?lat=${lat}&lng=${lng}`);
-        if (!res.ok) throw new Error("Weather fetch failed");
-        return await res.json();
-      } catch (err) {
-        console.error(err);
-        return null;
-      }
+      const res = await fetch(`${BASE_URL}/weather?lat=${lat}&lng=${lng}`);
+      if (!res.ok) throw new Error("Weather fetch failed");
+      return await res.json();
     }
 
-    // Fetch attractions
-    async function fetchAttractions(name) {
-      try {
-        const res = await fetch(`${BASE_URL}/attractions/${encodeURIComponent(name)}`);
-        if (!res.ok) throw new Error("Attractions fetch failed");
-        return await res.json();
-      } catch (err) {
-        console.error(err);
-        return null;
-      }
+    async function fetchAttractions(country) {
+      const res = await fetch(`${BASE_URL}/attractions/${encodeURIComponent(country)}`);
+      if (!res.ok) throw new Error("Attractions fetch failed");
+      return await res.json();
     }
 
-    // Add favorite
-    async function addFavorite(name) {
+    async function addFavorite(country, attraction = null) {
       if (!token) {
         alert("Please log in first!");
         return;
       }
-      try {
-        const res = await fetch(`${BASE_URL}/favorites/`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${token}`,
-          },
-          body: JSON.stringify({ country_name: name }),
-        });
-        const data = await res.json();
-        alert(data.message || "Added to favorites!");
-      } catch (err) {
-        console.error(err);
-      }
+
+      const payload = attraction
+        ? { attraction_name: attraction.name, country_name: country }
+        : { country_name: country };
+
+      const res = await fetch(`${BASE_URL}/favorites/`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+      alert(data.message || "Added to favorites!");
     }
 
-    // Add marker with popup
+    // 📍 Add markers for attractions
     function addAttractionMarker(attraction, countryName) {
       const marker = L.marker([attraction.lat, attraction.lng]).addTo(map);
-      const popupContent = `
+      const popup = `
         <div>
           <b>${attraction.name}</b><br>
           ${attraction.description || ""}<br>
-          <button class="attr-btn" onclick="addFavorite('${countryName}')">❤️ Favorite</button>
+          <button class="attr-btn" onclick="addFavorite('${countryName}', ${JSON.stringify(attraction).replace(/"/g, '&quot;')})">
+            ❤️ Favorite
+          </button>
         </div>
       `;
-      marker.bindPopup(popupContent);
+      marker.bindPopup(popup);
       attractionMarkers.push(marker);
     }
 
-    // Clear old markers
     function clearAttractionMarkers() {
       attractionMarkers.forEach(m => map.removeLayer(m));
       attractionMarkers = [];
     }
 
-    // GeoJSON World Map
+    // 🌍 Load world data
     fetch("https://raw.githubusercontent.com/johan/world.geo.json/master/countries.geo.json")
       .then(res => res.json())
       .then(data => {
@@ -168,55 +200,51 @@
           style: {
             color: "#38bdf8",
             weight: 1,
-            fillOpacity: 0.2
+            fillOpacity: 0.2,
           },
           onEachFeature: (feature, layer) => {
-            const name = feature.properties.name;
+            const countryName = feature.properties.name;
             layer.on({
-              mouseover: (e) => {
-                e.target.setStyle({ fillOpacity: 0.5, color: "#facc15" });
-              },
-              mouseout: (e) => {
-                e.target.setStyle({ fillOpacity: 0.2, color: "#38bdf8" });
-              },
-              click: async (e) => {
+              mouseover: e => e.target.setStyle({ fillOpacity: 0.5, color: "#facc15" }),
+              mouseout: e => e.target.setStyle({ fillOpacity: 0.2, color: "#38bdf8" }),
+              click: async e => {
                 clearAttractionMarkers();
                 map.fitBounds(layer.getBounds(), { padding: [20, 20] });
 
-                const info = await fetchCountryData(name);
-                if (!info) return;
+                try {
+                  const info = await fetchCountryInfo(countryName);
+                  const weather = await fetchWeather(info.latlng[0], info.latlng[1]);
+                  const attractions = await fetchAttractions(countryName);
 
-                const weather = await fetchWeather(info.latlng[0], info.latlng[1]);
-                const attractions = await fetchAttractions(name);
+                  const popupLatLng = info.latlng?.length
+                    ? [info.latlng[0], info.latlng[1]]
+                    : e.latlng;
 
-                // Country info popup at capital position (or center)
-                const popupLatLng = info.latlng[0] && info.latlng[1]
-                  ? [info.latlng[0], info.latlng[1]]
-                  : e.latlng;
+                  const content = `
+                    <div>
+                      <img src="${info.flag}" class="flag" />
+                      <b>${info.name}</b><br>
+                      Capital: ${info.capital}<br>
+                      Currency: ${info.currency}<br>
+                      Temp: ${weather?.weather?.temperature ?? "N/A"}°C<br>
+                      <button class="attr-btn" onclick="addFavorite('${info.name}')">❤️ Favorite Country</button>
+                    </div>
+                  `;
+                  L.popup({ closeOnClick: true })
+                    .setLatLng(popupLatLng)
+                    .setContent(content)
+                    .openOn(map);
 
-                const content = `
-                  <div>
-                    <img src="${info.flag}" class="flag" />
-                    <b>${info.name}</b><br>
-                    Capital: ${info.capital}<br>
-                    Currency: ${info.currency}<br>
-                    Temp: ${weather?.weather?.temperature ?? "N/A"}°C<br>
-                    <button class="attr-btn" onclick="addFavorite('${info.name}')">❤️ Favorite Country</button>
-                  </div>
-                `;
-
-                L.popup({ closeOnClick: true })
-                  .setLatLng(popupLatLng)
-                  .setContent(content)
-                  .openOn(map);
-
-                // Add attraction markers
-                if (attractions?.attractions?.length) {
-                  attractions.attractions.forEach(a => addAttractionMarker(a, info.name));
+                  if (attractions?.attractions?.length) {
+                    attractions.attractions.forEach(a => addAttractionMarker(a, info.name));
+                  }
+                } catch (err) {
+                  console.error(err);
+                  alert("Error loading data for " + countryName);
                 }
-              }
+              },
             });
-          }
+          },
         }).addTo(map);
       })
       .catch(err => console.error("GeoJSON load failed", err));
