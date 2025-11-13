@@ -65,12 +65,13 @@ def login_user(email: str, password: str):
 
 # -------- GET CURRENT USER --------
 @router.get("/me")
-def get_current_user(authorization: str = Header(...)):
+def get_current_user(authorization: str = Header(default=None, alias="Authorization")):
     """
     Accepts Bearer token in header:
         Authorization: Bearer <token>
-    Returns the user ID if token is valid.
     """
+    if not authorization:
+        raise HTTPException(status_code=400, detail="Authorization header missing")
     if not authorization.startswith("Bearer "):
         raise HTTPException(status_code=400, detail="Invalid authorization header format")
     
