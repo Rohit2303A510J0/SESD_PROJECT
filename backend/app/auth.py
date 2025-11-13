@@ -1,9 +1,10 @@
-from fastapi import APIRouter, HTTPException, Header, status
+from fastapi import APIRouter, HTTPException, Header, status, Depends
 from datetime import datetime, timedelta
 from app.database import get_db_connection
 import bcrypt
 import jwt
 import os
+from pydantic import BaseModel
 
 print("✅ Auth router loaded")
 
@@ -57,29 +58,47 @@ def login_user(email: str, password: str):
 
     # Generate JWT token
     expire = datetime.utcnow() + timedelta(hours=ACCESS_TOKEN_EXPIRE_HOURS)
-    payload = {"user_id": user_id, "exp": expire.timestamp()}  # store exp as timestamp
+    payload = {"user_id": user_id, "exp": expire}
     token = jwt.encode(payload, JWT_SECRET, algorithm=ALGORITHM)
 
     return {"access_token": token, "token_type": "bearer", "expires_at": expire.isoformat()}
 
 
-# -------- GET CURRENT USER --------
-from pydantic import BaseModel
+# -------- TOKEN VERIFICATION (Helper) --------
+def verify_access_token(authorization: str = Header(...)):
+    """
+    Verifies Bearer token passed via Authorization header.
+    Example: Authorization: Bearer <access_token>
+    """
+    if not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Invalid Authorization header format")
 
-# Pydantic model for input
+    token = authorization.split(" ")[1]
+
+    try:
+        payload = jwt.decode(token, JWT_SECRET, algorithms=[ALGORITHM])
+        user_id = payload.get("user_id")
+        if not user_id:
+            raise HTTPException(status_code=401, detail="Invalid token payload")
+        return {"user_id": user_id}
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token expired")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+
+# -------- GET CURRENT USER (POST for manual testing) --------
 class TokenInput(BaseModel):
     access_token: str
 
 @router.post("/me")
 def get_current_user(token_input: TokenInput):
     """
-    Get current user info from access token.
-    Simply paste the token in Swagger UI and click Execute.
+    Manual user check (for Swagger testing).
+    Paste your token directly as JSON: {"access_token": "yourtoken"}
     """
-    jwt_token = token_input.access_token.strip()
-
     try:
-        payload = jwt.decode(jwt_token, JWT_SECRET, algorithms=[ALGORITHM])
+        payload = jwt.decode(token_input.access_token, JWT_SECRET, algorithms=[ALGORITHM])
         user_id = payload.get("user_id")
         if not user_id:
             raise HTTPException(status_code=401, detail="Invalid token payload")
