@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Test Favorites</title>
+<style>
+  body { font-family:sans-serif; padding:20px; }
+  input, button { margin:5px; padding:6px; }
+  .fav-item { margin:10px 0; border:1px solid #ccc; padding:8px; }
+</style>
+</head>
+<body>
+
+<h2>Login</h2>
+<input type="text" id="username" placeholder="Username"/>
+<input type="password" id="password" placeholder="Password"/>
+<button onclick="login()">Login</button>
+
+<h2>Favorites</h2>
+<button onclick="getFavorites()">Get Favorites</button>
+<div id="favList"></div>
+
+<h3>Add Favorite</h3>
+<input type="number" id="attrId" placeholder="Attraction ID"/>
+<button onclick="addFavorite()">Add Favorite</button>
+
+<script>
+
+// Get token from localStorage
+const token = localStorage.getItem('access_token');
+
+// Log it to console
+console.log("✅ Access Token:", token);
+
+
+const BASE_URL = "https://sesd-project-7gqa.onrender.com";
+
+function login(){
+  const username = document.getElementById('username').value;
+  const password = document.getElementById('password').value;
+  fetch(`${BASE_URL}/auth/login`, {
+    method:'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({username,password})
+  })
+  .then(res=>res.json())
+  .then(data=>{
+    if(data.access_token){
+      localStorage.setItem('access_token', data.access_token);
+      alert('Logged in! Token saved.');
+      console.log("Token:", data.access_token);
+    } else {
+      alert('Login failed');
+      console.log(data);
+    }
+  });
+}
+
+function getFavorites(){
+  const token = localStorage.getItem('access_token');
+  fetch(`${BASE_URL}/favorites/`, {
+    headers: { Authorization: `Bearer ${token}` }
+  })
+  .then(res=>res.json())
+  .then(data=>{
+    const list = document.getElementById('favList');
+    list.innerHTML = '';
+    (data.favorites || []).forEach(f=>{
+      const div = document.createElement('div');
+      div.className='fav-item';
+      div.innerHTML = `ID:${f.id} - ${f.name} <button onclick="removeFavorite(${f.id})">Remove</button>`;
+      list.appendChild(div);
+    });
+  });
+}
+
+function addFavorite(){
+  const token = localStorage.getItem('access_token');
+  const attraction_id = parseInt(document.getElementById('attrId').value);
+  fetch(`${BASE_URL}/favorites/`, {
+    method:'POST',
+    headers: { 'Content-Type':'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ attraction_id })
+  })
+  .then(res=>res.json())
+  .then(data=>{
+    alert(JSON.stringify(data));
+    getFavorites();
+  });
+}
+
+function removeFavorite(id){
+  const token = localStorage.getItem('access_token');
+  fetch(`${BASE_URL}/favorites/${id}`, {
+    method:'DELETE',
+    headers: { Authorization: `Bearer ${token}` }
+  })
+  .then(res=>res.json())
+  .then(data=>{
+    alert(JSON.stringify(data));
+    getFavorites();
+  });
+}
+</script>
+
+</body>
+</html>
